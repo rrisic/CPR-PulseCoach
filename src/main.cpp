@@ -1,32 +1,29 @@
-#include <Vector.h>
+#include <vector>
+#include <Arduino.h>
+#include "setup.h"
+
+using namespace std;
 
 int oldest_val = 0;
-Vector<int> last_five;
-int size = 0;
+vector<int> last_five;
 
+#define  LC_DATA_PIN   3
+#define  LC_CLK_PIN    7
+#define  BTN_1_PIN     2
+
+int len = 0;
+float calibrationFactor;
+
+HX711 loadCell;
 void setup() {
-    pinMode(2, OUTPUT);
-    pinMode(3, INPUT);
-    pinMode(LED_BUILTIN, OUTPUT);
+    Serial.begin(9600);
+
+    calibrationFactor = loadCellCalibrate(loadCell, LC_DATA_PIN, LC_CLK_PIN, BTN_1_PIN, 1.0);
+  
 }
 
 void loop() {
     int time = millis();
-    if (1) { // Replace with bpm beat sensor
-        int new_time = millis();
-        if (size == 5) {
-            last_five[oldest_val] = new_time;
-            oldest_val = (oldest_val + 1) % 5;
-        } else {
-            last_five[size] = new_time;
-            size++;
-        }
+    
 
-        int last5_avg = (last_five[oldest_val] - last_five[(oldest_val + 1) % 5]) / 4;
-        if (100 < (60000 / last5_avg) && 120 > (60000 / last5_avg)) {
-            digitalWrite(LED_BUILTIN, LOW);
-        } else {
-            digitalWrite(LED_BUILTIN, HIGH);
-        }
-    }
 }
