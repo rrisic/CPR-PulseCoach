@@ -1,16 +1,13 @@
 #include <vector>
 #include <Arduino.h>
 #include <Wire.h>
-
-
 #include "setup.h"
 #include "loop.h"
 
+#include "../include/song_setup.h"
+#include "../include/bpm_helper.h"
 
 using namespace std;
-
-int oldest_val = 0;
-vector<int> last_five;
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -19,55 +16,139 @@ vector<int> last_five;
 #define  LC_CLK_PIN    7
 #define  BTN_1_PIN     2
 
--1 = no reset pin
 #define OLED_RESET     -1
 #define I2C_ADDRESS    0x3C  // Most SSD1306 I2C displays use 0x3C
 
+// Constants
+constexpr int COMPRESSION_BUTTON_PIN = 2;
+constexpr int MODE_BUTTON_PIN = 4;
+constexpr int TEST_DURATION = 30000;
+
+// Global variables
+bool isTrainingMode = true;
+vector<unsigned long> compression_times;
+unsigned long last_compression = 0;
+unsigned long last_mode_button_press = 0;
+unsigned long test_start_time = 0;
+constexpr unsigned long MODE_DEBOUNCE = 200;
 int len = 0;
 float calibrationFactor;
 
 HX711 loadCell;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-void setup() {
-    Serial.begin(9600);
+using namespace std;
 
-    calibrationFactor = loadCellCalibrate(loadCell, LC_DATA_PIN, LC_CLK_PIN, BTN_1_PIN, 1.0);
-  
+void setup() {
+    pinMode(COMPRESSION_BUTTON_PIN, INPUT_PULLUP);
+    pinMode(MODE_BUTTON_PIN, INPUT_PULLUP);
+    pinMode(LED_BUILTIN, OUTPUT);
+    compression_times.reserve(SAMPLE_SIZE);
+    Serial.begin(9600);
+    while (!Serial);
+    Serial.println("Starting program...");
+}
+
+void checkModeButton() {
+    unsigned long current_time = millis();
+    if (!digitalRead(MODE_BUTTON_PIN) && (current_time - last_mode_button_press > MODE_DEBOUNCE)) {
+        last_mode_button_press = current_time;
+        isTrainingMode = !isTrainingMode;
+        compression_times.clear();
+        
+        if (isTrainingMode) {
+            Serial.println("Switched to Training Mode");
+        } else {
+            Serial.println("Switched to Testing Mode");
+            test_start_time = millis();
+        }
+    }
+}
+
+void handleTrainingMode() {
+    if (compression_times.size() >= 2) {
+        float avg_bpm = calculateWeightedAverageBPM(compression_times);
+        float std_dev = calculateBPMStandardDeviation(compression_times);
+        bool is_consistent = isConsistentCompression(compression_times);
+        
+        Serial.print("Current BPM: ");
+        Serial.print(avg_bpm);
+        Serial.print(" (Std Dev: ");
+        Serial.print(std_dev);
+        Serial.println(")");
+
+        if (is_consistent && avg_bpm >= MIN_BPM && avg_bpm <= MAX_BPM) {
+            digitalWrite(LED_BUILTIN, HIGH);
+            Serial.println("Good compression rate and consistency!");
+        } else {
+            digitalWrite(LED_BUILTIN, LOW);
+            if (!is_consistent) {
+                Serial.println("Compression rate too inconsistent!");
+            }
+            if (avg_bpm > MAX_BPM) {
+                Serial.println("Too fast!");
+            } else if (avg_bpm < MIN_BPM) {
+                Serial.println("Too slow!");
+            }
+        }
+    }
+}
+
+void handleTestingMode() {
+    unsigned long current_time = millis();
+    unsigned long elapsed_time = current_time - test_start_time;
+    
+    if (elapsed_time >= TEST_DURATION) {
+        if (compression_times.size() >= 2) {
+            float avg_bpm = calculateWeightedAverageBPM(compression_times);
+            float std_dev = calculateBPMStandardDeviation(compression_times);
+            bool is_consistent = isConsistentCompression(compression_times);
+            
+            Serial.print("Test Complete. Average BPM: ");
+            Serial.print(avg_bpm);
+            Serial.print(" (Std Dev: ");
+            Serial.print(std_dev);
+            Serial.print(") - ");
+            Serial.println(is_consistent ? "Consistent" : "Inconsistent");
+            
+            compression_times.clear();
+            test_start_time = millis();
+        }
+    } else {
+        int remaining_seconds = (TEST_DURATION - elapsed_time) / 1000;
+        Serial.print("Time remaining: ");
+        Serial.print(remaining_seconds);
+        Serial.println(" seconds");
+    }
 }
 
 void loop() {
-    int time = millis();
-    float force;
+    checkModeButton();
+    
+    if (!digitalRead(COMPRESSION_BUTTON_PIN)) {
+        unsigned long current_time = millis();
+        while(!digitalRead(COMPRESSION_BUTTON_PIN));
+        
+        // Time-based decay logic
+        const unsigned long DECAY_THRESHOLD = 2000; // 2 seconds without compression
+        if (current_time - last_compression > DECAY_THRESHOLD && compression_times.size() > 0) {
+            compression_times.erase(compression_times.begin());
+        }
 
-    force = measureLoadCell(loadCell, LC_DATA_PIN, LC_CLK_PIN);
-    Serial.println(force);
-    delay(200);
+        // Add new timestamp only if it's a valid press
+        if (compression_times.size() >= SAMPLE_SIZE) {
+            compression_times.erase(compression_times.begin());
+        }
+        compression_times.push_back(current_time);
+        last_compression = current_time;
+    }
+    
+    if (isTrainingMode) {
+        handleTrainingMode();
+    } else {
+        handleTestingMode();
+    }
+
 }
 
 
-// void setup() {
-//   Serial.begin(9600);
-//   while (!Serial);
-
-//   Serial.println("Initializing SSD1306...");
-
-//   if (!display.begin(SSD1306_SWITCHCAPVCC, I2C_ADDRESS)) {
-//     Serial.println("SSD1306 allocation failed");
-//     while (true);  // Stay here forever
-//   }
-
-//   display.clearDisplay();
-//   display.setTextSize(1);
-//   display.setTextColor(SSD1306_WHITE);
-//   display.setCursor(0, 0);
-//   display.println("Hello, SSD1306!");
-//   display.display();
-
-//   delay(2000);
-//   display.println("User 1");
-//   display.display();
-//   delay(2000);
-// }
-
-// void loop() {}
