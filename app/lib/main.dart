@@ -2,12 +2,59 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+// import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
 
 void main() {
   runApp(MyApp());
 }
+/* Future<void> requestPermissions() async {
+  try {
+    // Request Bluetooth permission
+    var bluetoothStatus = await Permission.bluetooth.status;
+    if (!bluetoothStatus.isGranted) {
+      bluetoothStatus = await Permission.bluetooth.request();
+      print('Bluetooth permission status: $bluetoothStatus');
+    }
 
+    // Request Bluetooth Scan and Connect permissions (Android-specific, but safe to call on iOS)
+    var bluetoothScanStatus = await Permission.bluetoothScan.status;
+    if (!bluetoothScanStatus.isGranted) {
+      bluetoothScanStatus = await Permission.bluetoothScan.request();
+      print('Bluetooth Scan permission status: $bluetoothScanStatus');
+    }
+
+    var bluetoothConnectStatus = await Permission.bluetoothConnect.status;
+    if (!bluetoothConnectStatus.isGranted) {
+      bluetoothConnectStatus = await Permission.bluetoothConnect.request();
+      print('Bluetooth Connect permission status: $bluetoothConnectStatus');
+    }
+
+    // Request Location permission (required for BLE scanning on some iOS versions)
+    var locationStatus = await Permission.locationWhenInUse.status;
+    if (!locationStatus.isGranted) {
+      locationStatus = await Permission.locationWhenInUse.request();
+      print('Location permission status: $locationStatus');
+    }
+
+
+    // Check if all permissions are granted
+    if (!bluetoothStatus.isGranted ||
+        !bluetoothScanStatus.isGranted ||
+        !bluetoothConnectStatus.isGranted ||
+        !locationStatus.isGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Some permissions were denied. Please grant them in settings.')),
+      );
+    }
+  } catch (e) {
+    print('Error requesting permissions: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error requesting permissions: $e')),
+    );
+  }
+}
+*/
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -39,10 +86,11 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
 
   // Audio file selection
   final List<Map<String, String>> audioFiles = [
-    {'name': "Stayin' Alive", 'path': 'assets/stayinalive.mp3'},
-    {'name': 'Life is a Highway', 'path': 'assets/highway.mp3'},
-    {'name': 'Levitating', 'path': 'assets/levitating.mp3'},
-    {'name': 'All Star', 'path': 'assets/allstar.mp3'}
+    {'name': "Stayin' Alive", 'path': 'stayinalive.mp3'},
+    {'name': 'Life is a Highway', 'path': 'highway.mp3'},
+    {'name': 'Levitating', 'path': 'levitating.mp3'},
+    {'name': 'All Star', 'path': 'allstar.mp3'},
+    {'name': 'Metronome', 'path': 'metronome.mp3'}
   ];
   String? selectedAudioPath = 'metronome.mp3';
 
