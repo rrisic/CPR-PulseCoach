@@ -46,8 +46,10 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Need BLE permission</string>
+	<string>We need to use Bluetooth to scan for and connect to devices like the Arduino R4 WiFi.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>Need BLE permission</string>
+	<string>We need to use Bluetooth to scan for and connect to devices like the Arduino R4 WiFi.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need access to your location to scan for Bluetooth devices (required by iOS).</string>
 </dict>
 </plist>

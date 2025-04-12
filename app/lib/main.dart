@@ -2,59 +2,112 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-// import 'package:permission_handler/permission_handler.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
+import 'dart:io' show Platform;
 
-void main() {
-  runApp(MyApp());
-}
-/* Future<void> requestPermissions() async {
+void main() async {
+  // Ensure Flutter is initialized
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize FlutterBluePlus
   try {
-    // Request Bluetooth permission
-    var bluetoothStatus = await Permission.bluetooth.status;
-    if (!bluetoothStatus.isGranted) {
-      bluetoothStatus = await Permission.bluetooth.request();
-      print('Bluetooth permission status: $bluetoothStatus');
-    }
-
-    // Request Bluetooth Scan and Connect permissions (Android-specific, but safe to call on iOS)
-    var bluetoothScanStatus = await Permission.bluetoothScan.status;
-    if (!bluetoothScanStatus.isGranted) {
-      bluetoothScanStatus = await Permission.bluetoothScan.request();
-      print('Bluetooth Scan permission status: $bluetoothScanStatus');
-    }
-
-    var bluetoothConnectStatus = await Permission.bluetoothConnect.status;
-    if (!bluetoothConnectStatus.isGranted) {
-      bluetoothConnectStatus = await Permission.bluetoothConnect.request();
-      print('Bluetooth Connect permission status: $bluetoothConnectStatus');
-    }
-
-    // Request Location permission (required for BLE scanning on some iOS versions)
-    var locationStatus = await Permission.locationWhenInUse.status;
-    if (!locationStatus.isGranted) {
-      locationStatus = await Permission.locationWhenInUse.request();
-      print('Location permission status: $locationStatus');
-    }
-
-
-    // Check if all permissions are granted
-    if (!bluetoothStatus.isGranted ||
-        !bluetoothScanStatus.isGranted ||
-        !bluetoothConnectStatus.isGranted ||
-        !locationStatus.isGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Some permissions were denied. Please grant them in settings.')),
-      );
+    if (Platform.isIOS) {
+      // For iOS, initialize FlutterBluePlus with specific configurations
+      print('Initializing FlutterBluePlus for iOS');
+      await FlutterBluePlus.setLogLevel(LogLevel.verbose);
     }
   } catch (e) {
+    print('Error initializing FlutterBluePlus: $e');
+  }
+  
+  runApp(MyApp());
+}
+
+Future<Map<String, bool>> requestPermissions() async {
+  Map<String, bool> permissionResults = {
+    'bluetooth': false,
+    'bluetoothScan': false, 
+    'bluetoothConnect': false,
+  };
+
+  // Print initial status for debugging
+  print('Initial bluetooth status: ${await Permission.bluetooth.status}');
+  print('Initial bluetoothScan status: ${await Permission.bluetoothScan.status}');
+  print('Initial bluetoothConnect status: ${await Permission.bluetoothConnect.status}');
+
+  try {
+    // For iOS, we need to request Location permission first
+    // as it's often a prerequisite for Bluetooth scanning
+    if (Platform.isIOS) {
+      // Request Location first (this should trigger the iOS system prompt)
+      
+
+      
+      // Then request bluetooth permissions
+      if (await Permission.bluetooth.status != PermissionStatus.granted) {
+        final bluetoothStatus = await Permission.bluetooth.request();
+        print('Bluetooth permission after request: $bluetoothStatus');
+        permissionResults['bluetooth'] = bluetoothStatus.isGranted;
+      } else {
+        permissionResults['bluetooth'] = true;
+      }
+      
+      // Apply the same pattern to other permissions with delays between
+      await Future.delayed(Duration(milliseconds: 5000));
+      
+      if (await Permission.bluetoothScan.status != PermissionStatus.granted) {
+        final scanStatus = await Permission.bluetoothScan.request();
+        print('Bluetooth Scan permission after request: $scanStatus');
+        permissionResults['bluetoothScan'] = scanStatus.isGranted;
+      } else {
+        permissionResults['bluetoothScan'] = true;
+      }
+      
+      await Future.delayed(Duration(milliseconds: 5000));
+      
+      if (await Permission.bluetoothConnect.status != PermissionStatus.granted) {
+        final connectStatus = await Permission.bluetoothConnect.request();
+        print('Bluetooth Connect permission after request: $connectStatus');
+        permissionResults['bluetoothConnect'] = connectStatus.isGranted;
+      } else {
+        permissionResults['bluetoothConnect'] = true;
+      }
+    } else {
+      // Android handling
+      // Request permissions in sequence
+      final bluetoothStatus = await Permission.bluetooth.request();
+      permissionResults['bluetooth'] = bluetoothStatus.isGranted;
+      
+      final bluetoothScanStatus = await Permission.bluetoothScan.request();
+      permissionResults['bluetoothScan'] = bluetoothScanStatus.isGranted;
+      
+      final bluetoothConnectStatus = await Permission.bluetoothConnect.request();
+      permissionResults['bluetoothConnect'] = bluetoothConnectStatus.isGranted;
+    }
+
+    // Check if any permission was denied
+    if (permissionResults.containsValue(false)) {
+      print('Some permissions were not granted: $permissionResults');
+      
+      // Check if all permissions are permanently denied
+      if (await Permission.bluetooth.isPermanentlyDenied &&
+          await Permission.bluetoothScan.isPermanentlyDenied &&
+          await Permission.bluetoothConnect.isPermanentlyDenied) {
+        print('All permissions are permanently denied. Open app settings...');
+      }
+    } else {
+      print('All permissions granted successfully');
+    }
+
+    return permissionResults;
+  } catch (e) {
     print('Error requesting permissions: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error requesting permissions: $e')),
-    );
+    return permissionResults;
   }
 }
-*/
+
+
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -98,7 +151,7 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
   late AnimationController _animationController;
   late Animation<double> _pulseAnimation;
 
-  final String targetDeviceName = "Arduino R4 WiFi";
+  final String targetDeviceName = "Arduino";
   final String serviceUuid = "19B10000-E8F2-537E-4F6C-D104768A1214";
   final String characteristicUuid = "19B10001-E8F2-537E-4F6C-D104768A1214";
 
@@ -149,63 +202,94 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
   }
 
   Future<void> _startBluetoothScan() async {
-    print('Starting Bluetooth scan...');
-    print('Note: Please ensure Bluetooth and location permissions are granted in device settings.');
-
-    setState(() {
-      isScanning = true;
-      scanResults.clear();
-    });
-
-    StreamSubscription<ScanResult>? subscription;
-    subscription = FlutterBluePlus.scan().listen((result) {
-      print('Found device: ${result.device.name} (${result.device.id})');
-      if (result.device.name == targetDeviceName) {
-        setState(() {
-          if (!scanResults.any((existing) => existing.device.id == result.device.id)) {
-            scanResults.add(result);
+  
+  // If we get here, we should have permissions
+  setState(() {
+    isScanning = true;
+    scanResults.clear();
+  });
+  
+  try {
+    // Use a different approach to start scanning
+    print('Starting scan with permissions');
+    
+    // Use the listeners approach
+    var subscription = FlutterBluePlus.scanResults.listen(
+      (results) {
+        for (ScanResult result in results) {
+          print('Device found: ${result.device.platformName} (${result.device.remoteId})');
+          if (result.device.platformName == targetDeviceName) {
+            setState(() {
+              if (!scanResults.any((existing) => existing.device.remoteId == result.device.remoteId)) {
+                scanResults.add(result);
+              }
+            });
           }
+        }
+      },
+      onError: (e) {
+        print('Scan results error: $e');
+        setState(() {
+          isScanning = false;
+        });
+      },
+      onDone: () {
+        setState(() {
+          isScanning = false;
+        });
+      },
+    );
+    
+    // Start scan with specific settings for iOS
+    await FlutterBluePlus.startScan(
+      timeout: Duration(seconds: 4),
+      androidUsesFineLocation: true,
+    );
+    
+    // Cancel the subscription after scan timeout
+    Future.delayed(Duration(seconds: 5)).then((_) {
+      subscription.cancel();
+      if (isScanning) {
+        try {
+          FlutterBluePlus.stopScan();
+        } catch (e) {
+          print('Error stopping scan: $e');
+        }
+        setState(() {
+          isScanning = false;
         });
       }
-    }, onDone: () {
-      subscription?.cancel();
-      setState(() {
-        isScanning = false;
-      });
-    }, onError: (e) {
-      print('Error during Bluetooth scan: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error during scan: $e')),
-      );
-      subscription?.cancel();
-      setState(() {
-        isScanning = false;
-      });
     });
-
-    await Future.delayed(Duration(seconds: 4));
-    await FlutterBluePlus.stopScan();
+  } catch (e) {
+    print('Error in Bluetooth scan: $e');
+    setState(() {
+      isScanning = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Scan error: $e')),
+    );
   }
+}
 
   Future<void> _connectToDevice(BluetoothDevice device) async {
-    print('Attempting to connect to device: ${device.name} (${device.id})');
+    print('Attempting to connect to device: ${device.platformName} (${device.remoteId})');
 
     try {
       if (connectedDevice != null) {
-        print('Disconnecting from previous device: ${connectedDevice!.name}');
+        print('Disconnecting from previous device: ${connectedDevice!.platformName}');
         await connectedDevice!.disconnect();
         print('Disconnected from previous device');
       }
 
       print('Connecting to device...');
       await device.connect(timeout: Duration(seconds: 10));
-      print('Successfully connected to device: ${device.name}');
+      print('Successfully connected to device: ${device.platformName}');
 
       setState(() {
         connectedDevice = device;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Connected to ${device.name}')),
+        SnackBar(content: Text('Connected to ${device.platformName}')),
       );
 
       print('Discovering services...');
@@ -244,9 +328,9 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
             targetCharacteristic = null;
             ledState = false;
           });
-          print('Device disconnected: ${device.name}');
+          print('Device disconnected: ${device.platformName}');
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Disconnected from ${device.name}')),
+            SnackBar(content: Text('Disconnected from ${device.platformName}')),
           );
         }
       });
@@ -272,9 +356,6 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
       });
       await targetCharacteristic!.write([ledState ? 1 : 0]);
       print('LED state set to: $ledState');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('LED turned ${ledState ? 'ON' : 'OFF'}')),
-      );
     } catch (e) {
       print('Error writing to characteristic: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -368,6 +449,7 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
           ),
           SizedBox(height: 20),
 
+          
           // Input Section
           Row(
             children: [
@@ -485,10 +567,10 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
               itemBuilder: (context, index) {
                 final result = scanResults[index];
                 final device = result.device;
-                final isConnected = connectedDevice?.id == device.id;
+                final isConnected = connectedDevice?.remoteId == device.remoteId;
                 return ListTile(
-                  title: Text(device.name),
-                  subtitle: Text(device.id.toString()),
+                  title: Text(device.platformName),
+                  subtitle: Text(device.remoteId.toString()),
                   trailing: ElevatedButton(
                     onPressed: isConnected ? null : () => _connectToDevice(device),
                     child: Text(isConnected ? 'Connected' : 'Connect'),
