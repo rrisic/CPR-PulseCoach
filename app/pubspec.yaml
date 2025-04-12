@@ -1,0 +1,10 @@
+name: your_app_name
+description: A new Flutter project.
+
+environment:
+  sdk: '^3.7.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  fl_chart: ^0.68.0  # Use the latest version available
