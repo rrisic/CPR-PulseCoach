@@ -3,7 +3,7 @@
 
 **CPR PulseCoach** is an embedded training device that helps civilians and first responders alike improve their CPR timing and rhythm. Built for real-world readiness, it offers engaging modes, live performance feedback, and seamless mobile integration — all designed to help users master the life-saving skill of chest compressions.
 
-💡 *Built at [Hackathon Name] 2025 — Turning rhythm into rescue.*
+💡 *Built at [BitHacks] 2025 — Turning rhythm into rescue.*
 
 ## 🚑 **What It Does**
 **CPR PulseCoach** is a smart CPR training tool that lets users practice and test their CPR technique with accurate, real-time feedback.
@@ -14,7 +14,7 @@
   - A mini metal speaker (metronome or song mode)
   - A color-coded interface (Too Slow, On Beat, Too Fast)
   - Wireless communication via Bluetooth
-  - Companion Flutter mobile app for real-time plotting, feedback, and stats
+  - Companion Flutter mobile app for real-time plotting, audio feedback, and stats
 
 ## 🎮 **Modes**
 
@@ -36,6 +36,7 @@
 - OLED displays a countdown timer only — *no live feedback*
 - User must keep tempo without assistance
 - Performance is logged via Bluetooth to the app
+- Optional "ambient/emergency" noise to mimic stressful real-world environment
 
 **After the session:**
 - App displays accuracy score and timing graph
@@ -65,5 +66,5 @@ Whether you're a medical student, paramedic, or just someone who wants to be rea
 ⚡ *Coming soon: Check out our demo video and app screenshots!*
 
 ## 🤝 **Team**
-*Built with care and caffeine by [Your Team Name]*
+*Built with care by Ryder Risic, Youngwoo Chang, Evan Velek, Ethan Vo*
 🚀 **Hackathon 2025 Submission**
