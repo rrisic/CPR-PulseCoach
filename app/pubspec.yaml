@@ -1,4 +1,5 @@
-name: your_app_name
+name: CPRPulseCoach
+version: 1.0.0+1
 description: A new Flutter project.
 
 environment:
@@ -7,4 +8,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_blue_plus: ^1.35.3
   fl_chart: ^0.68.0  # Use the latest version available
+  audioplayers: ^6.0.0
+  permission_handler: ^11.3.1
+
+flutter:
+  assets:
+    - assets/highway.mp3
+    - assets/stayinalive.mp3
+    - assets/levitating.mp3
+    - assets/allstar.mp3
+    - assets/metronome.mp3
+    - assets/panic.mp3
