@@ -1,14 +1,28 @@
 #include <vector>
 #include <Arduino.h>
+#include <Wire.h>
+#include "setup.h"
+#include "loop.h"
+
 #include "../include/song_setup.h"
 #include "../include/bpm_helper.h"
 
 using namespace std;
 
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+#define  LC_DATA_PIN   3
+#define  LC_CLK_PIN    7
+#define  BTN_1_PIN     2
+
+#define OLED_RESET     -1
+#define I2C_ADDRESS    0x3C  // Most SSD1306 I2C displays use 0x3C
+
 // Constants
-const int COMPRESSION_BUTTON_PIN = 2;
-const int MODE_BUTTON_PIN = 4;
-const int TEST_DURATION = 30000;
+constexpr int COMPRESSION_BUTTON_PIN = 2;
+constexpr int MODE_BUTTON_PIN = 4;
+constexpr int TEST_DURATION = 30000;
 
 // Global variables
 bool isTrainingMode = true;
@@ -16,7 +30,14 @@ vector<unsigned long> compression_times;
 unsigned long last_compression = 0;
 unsigned long last_mode_button_press = 0;
 unsigned long test_start_time = 0;
-const unsigned long MODE_DEBOUNCE = 200;
+constexpr unsigned long MODE_DEBOUNCE = 200;
+int len = 0;
+float calibrationFactor;
+
+HX711 loadCell;
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+using namespace std;
 
 void setup() {
     pinMode(COMPRESSION_BUTTON_PIN, INPUT_PULLUP);
@@ -127,4 +148,7 @@ void loop() {
     } else {
         handleTestingMode();
     }
+
 }
+
+
