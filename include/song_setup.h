@@ -1,5 +1,7 @@
-#ifndef TETRIS_SONG_H
-#define TETRIS_SONG_H
+#ifndef SONG_SETUP_H
+#define SONG_SETUP_H
+
+#include <Arduino.h>
 
  /* 
   Tetris theme - (Korobeiniki) 
@@ -99,8 +101,9 @@
 #define NOTE_DS8 4978
 #define REST 0
 
+#define TETRIS_SONG 1
+#define MARIO_SONG 2
 
-
-void tetris(const int SPEAKER_PIN, const int BPM);
+void speaker(const int SPEAKER_PIN, const int BPM, char song);
 
 #endif
