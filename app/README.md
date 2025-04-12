@@ -1,4 +1,4 @@
-# cpr_pulse_coach
+# app
 
 A new Flutter project.
 

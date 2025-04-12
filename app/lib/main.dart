@@ -1,186 +1,122 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: Text('Recent Inputs Graph'),
-        ),
-        body: InputGraphWidget(),
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        // This is the theme of your application.
+        //
+        // TRY THIS: Try running your application with "flutter run". You'll see
+        // the application has a purple toolbar. Then, without quitting the app,
+        // try changing the seedColor in the colorScheme below to Colors.green
+        // and then invoke "hot reload" (save your changes or press the "hot
+        // reload" button in a Flutter-supported IDE, or press "r" if you used
+        // the command line to start the app).
+        //
+        // Notice that the counter didn't reset back to zero; the application
+        // state is not lost during the reload. To reset the state, use hot
+        // restart instead.
+        //
+        // This works for code too, not just values: Most code changes can be
+        // tested with just a hot reload.
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
-class InputGraphWidget extends StatefulWidget {
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key, required this.title});
+
+  // This widget is the home page of your application. It is stateful, meaning
+  // that it has a State object (defined below) that contains fields that affect
+  // how it looks.
+
+  // This class is the configuration for the state. It holds the values (in this
+  // case the title) provided by the parent (in this case the App widget) and
+  // used by the build method of the State. Fields in a Widget subclass are
+  // always marked "final".
+
+  final String title;
+
   @override
-  _InputGraphWidgetState createState() => _InputGraphWidgetState();
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _InputGraphWidgetState extends State<InputGraphWidget> {
-  final TextEditingController _controller = TextEditingController();
-  List<double> recentNumbers = [];
+class _MyHomePageState extends State<MyHomePage> {
+  int _counter = 0;
 
-  // Function to round up maxY to a sensible value
-  double roundUpMaxY(double maxValue) {
-    if (maxValue <= 0) return 10.0; // Default for no data or negative values
-
-    // Determine the step size based on the magnitude of maxValue
-    double step;
-    if (maxValue <= 10) {
-      step = 2; // Small numbers: step by 2 (e.g., 2, 4, 6, 8, 10)
-    } else if (maxValue <= 50) {
-      step = 10; // Medium numbers: step by 10 (e.g., 10, 20, 30, 40, 50)
-    } else if (maxValue <= 200) {
-      step = 20; // Larger numbers: step by 20 (e.g., 20, 40, 60, 80, 100)
-    } else {
-      step = 50; // Very large numbers: step by 50 (e.g., 50, 100, 150, 200)
-    }
-
-    // Round up to the nearest step
-    return (maxValue / step).ceil() * step;
+  void _incrementCounter() {
+    setState(() {
+      // This call to setState tells the Flutter framework that something has
+      // changed in this State, which causes it to rerun the build method below
+      // so that the display can reflect the updated values. If we changed
+      // _counter without calling setState(), then the build method would not be
+      // called again, and so nothing would appear to happen.
+      _counter++;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Calculate maxY dynamically, default to 10 if no data
-    double maxY = recentNumbers.isNotEmpty
-        ? recentNumbers.reduce((a, b) => a > b ? a : b)
-        : 10.0;
-    maxY = roundUpMaxY(maxY); // Round up to a sensible value
-
-    // Calculate the interval for y-axis ticks to align with maxY
-    double yInterval;
-    if (maxY <= 10) {
-      yInterval = 2; // Small steps for small maxY
-    } else if (maxY <= 50) {
-      yInterval = 10;
-    } else if (maxY <= 200) {
-      yInterval = 20;
-    } else {
-      yInterval = 50;
-    }
-
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Input Section
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'Enter a number',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              SizedBox(width: 10),
-              ElevatedButton(
-                onPressed: () {
-                  String input = _controller.text;
-                  try {
-                    double number = double.parse(input);
-                    setState(() {
-                      if (recentNumbers.length >= 5) {
-                        recentNumbers.removeAt(0); // Remove oldest number
-                      }
-                      recentNumbers.add(number); // Add new number
-                      _controller.clear(); // Clear the input field
-                    });
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Please enter a valid number')),
-                    );
-                  }
-                },
-                child: Text('Add'),
-              ),
-            ],
-          ),
-          SizedBox(height: 20), // Spacing between input and graph
-
-          // Graph Section
-          Expanded(
-            child: LineChart(
-              LineChartData(
-                minY: 0, // Y-axis lower bound at 0
-                maxY: maxY, // Use the rounded maxY
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: List.generate(
-                      recentNumbers.length,
-                      (index) => FlSpot(index.toDouble(), recentNumbers[index]),
-                    ),
-                    isCurved: false, // Straight lines between points
-                    color: Colors.blue, // Line color
-                    barWidth: 2, // Line thickness
-                    dotData: FlDotData(show: true), // Show dots at data points
-                  ),
-                ],
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      interval: 1,
-                      getTitlesWidget: (value, meta) {
-                        int index = value.toInt();
-                        if (index >= 0 && index < recentNumbers.length) {
-                          return Text(
-                            (index + 1).toString(),
-                            style: TextStyle(fontSize: 12),
-                          );
-                        }
-                        return Text('');
-                      },
-                    ),
-                    axisNameWidget: Text('Input Order'),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 40, // Space for y-axis labels
-                      interval: yInterval, // Set the y-axis tick interval
-                      getTitlesWidget: (value, meta) {
-                        // Only show labels up to maxY
-                        if (value <= maxY) {
-                          return Text(
-                            value.toInt().toString(),
-                            style: TextStyle(fontSize: 12),
-                          );
-                        }
-                        return Text('');
-                      },
-                    ),
-                    axisNameWidget: Text('Number Value'),
-                  ),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                ),
-                borderData: FlBorderData(show: true), // Show chart border
-                gridData: FlGridData(show: true), // Show grid lines
-              ),
-            ),
-          ),
-        ],
+    // This method is rerun every time setState is called, for instance as done
+    // by the _incrementCounter method above.
+    //
+    // The Flutter framework has been optimized to make rerunning build methods
+    // fast, so that you can just rebuild anything that needs updating rather
+    // than having to individually change instances of widgets.
+    return Scaffold(
+      appBar: AppBar(
+        // TRY THIS: Try changing the color here to a specific color (to
+        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
+        // change color while the other colors stay the same.
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        // Here we take the value from the MyHomePage object that was created by
+        // the App.build method, and use it to set our appbar title.
+        title: Text(widget.title),
       ),
+      body: Center(
+        // Center is a layout widget. It takes a single child and positions it
+        // in the middle of the parent.
+        child: Column(
+          // Column is also a layout widget. It takes a list of children and
+          // arranges them vertically. By default, it sizes itself to fit its
+          // children horizontally, and tries to be as tall as its parent.
+          //
+          // Column has various properties to control how it sizes itself and
+          // how it positions its children. Here we use mainAxisAlignment to
+          // center the children vertically; the main axis here is the vertical
+          // axis because Columns are vertical (the cross axis would be
+          // horizontal).
+          //
+          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
+          // action in the IDE, or press "p" in the console), to see the
+          // wireframe for each widget.
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            const Text('You have pushed the button this many times:'),
+            Text(
+              '$_counter',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _incrementCounter,
+        tooltip: 'Increment',
+        child: const Icon(Icons.add),
+      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose(); // Clean up the controller
-    super.dispose();
   }
 }

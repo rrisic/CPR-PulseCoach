@@ -1,6 +1,6 @@
 {
-    "name": "cpr_pulse_coach",
-    "short_name": "cpr_pulse_coach",
+    "name": "app",
+    "short_name": "app",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
