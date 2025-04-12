@@ -6,15 +6,9 @@
 using namespace std;
 
 // Constants
-const int TARGET_BPM = 103;
-const int MIN_BPM = 90;
-const int MAX_BPM = 116;
-const int SAMPLE_SIZE = 10;  // Increased sample size
 const int COMPRESSION_BUTTON_PIN = 2;
 const int MODE_BUTTON_PIN = 4;
 const int TEST_DURATION = 30000;
-const float MAX_STD_DEV = 15.0;  // Maximum allowed standard deviation in BPM
-const float MIN_CONSISTENCY = 0.8;  // Minimum consistency ratio (0.0 to 1.0)
 
 // Global variables
 bool isTrainingMode = true;
