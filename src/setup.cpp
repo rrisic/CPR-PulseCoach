@@ -39,7 +39,7 @@ float loadCellCalibrate(HX711 loadCell, const int dataPin, const int clkPin, con
         Serial.println("Referencing Weight");
         // .get_units() averages n number of readings in grams
         weight = loadCell.get_units(NUM_SAMPLES) / G_PER_KG;
-        calibrationFactor = knownWeight / weight;
+        calibrationFactor = weight / knownWeight;
 
         delay(50);
         if (Serial) 
@@ -50,5 +50,20 @@ float loadCellCalibrate(HX711 loadCell, const int dataPin, const int clkPin, con
             Serial.println(calibrationFactor);
         }
     } 
+    loadCell.set_scale(calibrationFactor);
+    delay(50);
     return calibrationFactor;
 }
+
+bool oledSetup(Adafruit_SSD1306 display, const int SSD1306, const int i2cAddress)
+{
+    if (!display.begin(SSD1306, i2cAddress)) {
+        if (Serial) Serial.println("SSD1306 allocation failed");
+            delay(20);
+            return false;
+    }
+    if (Serial) Serial.println("Found OLED!");    
+    return true;   
+}
+
+
