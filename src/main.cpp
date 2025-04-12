@@ -63,7 +63,8 @@ void handleTrainingMode() {
             digitalWrite(LED_BUILTIN, LOW);
             if (!is_consistent) {
                 Serial.println("Compression rate too inconsistent!");
-            } else if (avg_bpm > MAX_BPM) {
+            }
+            if (avg_bpm > MAX_BPM) {
                 Serial.println("Too fast!");
             } else if (avg_bpm < MIN_BPM) {
                 Serial.println("Too slow!");
@@ -107,10 +108,18 @@ void loop() {
         unsigned long current_time = millis();
         while(!digitalRead(COMPRESSION_BUTTON_PIN));
         
+        // Time-based decay logic
+        const unsigned long DECAY_THRESHOLD = 2000; // 2 seconds without compression
+        if (current_time - last_compression > DECAY_THRESHOLD && compression_times.size() > 0) {
+            compression_times.erase(compression_times.begin());
+        }
+
+        // Add new timestamp only if it's a valid press
         if (compression_times.size() >= SAMPLE_SIZE) {
             compression_times.erase(compression_times.begin());
         }
         compression_times.push_back(current_time);
+        last_compression = current_time;
     }
     
     if (isTrainingMode) {
