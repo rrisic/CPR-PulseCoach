@@ -4,9 +4,6 @@
 // change this to make the song slower or faster
 int tempo=144; 
 
-// change this to whichever pin you want to use
-int buzzer = 11;
-
 // notes of the moledy followed by the duration.
 // a 4 means a quarter note, 8 an eighteenth , 16 sixteenth, so on
 // !!negative numbers are used to represent dotted notes,
@@ -47,17 +44,17 @@ int melody[] = {
 
 };
 
-// sizeof gives the number of bytes, each int value is composed of two bytes (16 bits)
-// there are two values per note (pitch and duration), so for each note there are four bytes
-int notes=sizeof(melody)/sizeof(melody[0])/2; 
+void tetris(const int SPEAKER_PIN, const int BPM) {
+  // sizeof gives the number of bytes, each int value is composed of two bytes (16 bits)
+  // there are two values per note (pitch and duration), so for each note there are four bytes
+  int notes=sizeof(melody)/sizeof(melody[0])/2; 
 
-// this calculates the duration of a whole note in ms (60s/tempo)*4 beats
-int wholenote = (60000 * 4) / tempo;
+  // this calculates the duration of a whole note in ms (60s/tempo)*4 beats
+  int wholenote = (60000 * 4) / tempo;
 
-int divider = 0, noteDuration = 0;
+  int divider = 0, noteDuration = 0;
 
-void tetris() {
-// iterate over the notes of the melody. 
+  // iterate over the notes of the melody. 
   // Remember, the array is twice the number of notes (notes + durations)
   for (int thisNote = 0; thisNote < notes * 2; thisNote = thisNote + 2) {
 
@@ -73,12 +70,12 @@ void tetris() {
     }
 
     // we only play the note for 90% of the duration, leaving 10% as a pause
-    tone(buzzer, melody[thisNote], noteDuration*0.9);
+    tone(SPEAKER_PIN, melody[thisNote], noteDuration*0.9);
 
     // Wait for the specief duration before playing the next note.
     delay(noteDuration);
     
     // stop the waveform generation before the next note.
-    noTone(buzzer);
+    noTone(SPEAKER_PIN);
   }
 }

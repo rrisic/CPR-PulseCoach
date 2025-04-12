@@ -1,6 +1,7 @@
 #include <vector>
 #include <Arduino.h>
 #include "../include/tetris_song.h"
+#include <iostream>
 using namespace std;
 
 const int TARGET_BPM = 103;
@@ -13,26 +14,46 @@ vector<unsigned long> compression_times;
 unsigned long last_compression = 0;
 
 void setup() {
-    //pinMode(2, INPUT_PULLUP);
-    //pinMode(LED_BUILTIN, OUTPUT);
-    pinMode(SPEAKER_PIN, OUTPUT);
+    pinMode(2, INPUT_PULLUP);
+    pinMode(LED_BUILTIN, OUTPUT);
+    //pinMode(SPEAKER_PIN, OUTPUT);
     compression_times.reserve(SAMPLE_SIZE);
+    Serial.begin(9600);  // Start serial at 9600 baud
+    // Wait for Serial to connect (optional, helpful for boards like Leonardo or R4 WiFi)
+    while (!Serial);
+
+    Serial.println("Starting program...");
 }
 
 void loop() {
     // Play tone on button press
-    tone(SPEAKER_PIN, 1000, 5000);
-    delay(100);
-    //tetris();
-    /*
+    //tone(SPEAKER_PIN, 1000, 5000);
+    //delay(100);
+    //tetris(SPEAKER_PIN, TARGET_BPM);
+    
+    // Calculate BPM if we have enough samples
+    if (compression_times.size() >= 2) {
+        // Calculate average interval between compressions
+        float avg_interval = compression_times[compression_times.size() - 1] - compression_times[0];
+        avg_interval /= (compression_times.size() - 1);
+        
+        // Convert to BPM (60000ms per minute)
+        int current_bpm = 60000 / avg_interval;
+        //while (digitalRead(2)) {delay(50);}
+        Serial.print(current_bpm);
+        Serial.println();
+
+        // Check if BPM is within target range
+        if (current_bpm >= MIN_BPM && current_bpm <= MAX_BPM) {
+            digitalWrite(LED_BUILTIN, HIGH);
+        } else {
+            digitalWrite(LED_BUILTIN, LOW);
+        }
+    }
     if (!digitalRead(2)) {
         unsigned long current_time = millis();
-        
-        // Debounce check - ignore presses less than 100ms apart
-        if (current_time - last_compression < 100) {
-            return;
-        }
-        
+        while(!digitalRead(2));
+
         last_compression = current_time;
         
         // Add new compression time
@@ -40,27 +61,8 @@ void loop() {
             compression_times.erase(compression_times.begin());
         }
         compression_times.push_back(current_time);
-        
-        // Calculate BPM if we have enough samples
-        if (compression_times.size() >= 2) {
-            // Calculate average interval between compressions
-            float avg_interval = 0;
-            for (size_t i = 1; i < compression_times.size(); i++) {
-                avg_interval += compression_times[i] - compression_times[i-1];
-            }
-            avg_interval /= (compression_times.size() - 1);
-            
-            // Convert to BPM (60000ms per minute)
-            int current_bpm = 60000 / avg_interval;
-            
-            // Check if BPM is within target range
-            if (current_bpm >= MIN_BPM && current_bpm <= MAX_BPM) {
-                digitalWrite(LED_BUILTIN, HIGH);
-            } else {
-                digitalWrite(LED_BUILTIN, LOW);
-            }
-        }
-    
+        delay(50);
     }
-    */
+    
+    
 }

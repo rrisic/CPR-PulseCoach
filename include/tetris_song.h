@@ -101,6 +101,6 @@
 
 
 
-void tetris();
+void tetris(const int SPEAKER_PIN, const int BPM);
 
 #endif
