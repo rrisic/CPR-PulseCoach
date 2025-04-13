@@ -12,8 +12,8 @@ using namespace std;
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
-#define  LC_DATA_PIN   3
-#define  LC_CLK_PIN    7
+#define  LC_DATA_PIN   4
+#define  LC_CLK_PIN    3
 #define  BTN_1_PIN     2
 
 #define OLED_RESET     -1
@@ -23,7 +23,7 @@ using namespace std;
 constexpr int COMPRESSION_BUTTON_PIN = 2;
 constexpr int MODE_BUTTON_PIN = 4;
 constexpr int TEST_DURATION = 30000;
-
+constexpr float CALIB_FACTOR = 117.58f;
 // Global variables
 bool isTrainingMode = true;
 vector<unsigned long> compression_times;
@@ -40,13 +40,23 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 using namespace std;
 
 void setup() {
-    pinMode(COMPRESSION_BUTTON_PIN, INPUT_PULLUP);
-    pinMode(MODE_BUTTON_PIN, INPUT_PULLUP);
-    pinMode(LED_BUILTIN, OUTPUT);
-    compression_times.reserve(SAMPLE_SIZE);
+    // pinMode(COMPRESSION_BUTTON_PIN, INPUT_PULLUP);
+    // pinMode(MODE_BUTTON_PIN, INPUT_PULLUP);
+    // pinMode(LED_BUILTIN, OUTPUT);
+    // compression_times.reserve(SAMPLE_SIZE);
     Serial.begin(9600);
-    while (!Serial);
+    // while (!Serial);
     Serial.println("Starting program...");
+
+    /* test hx711 */
+    loadCell.begin(LC_DATA_PIN, LC_CLK_PIN);
+    while (!loadCell.is_ready()) {Serial.println("Load Cell NOT DETECTED!");}
+    Serial.println("TARING!");
+    delay(3000);
+    loadCell.tare();
+    delay(500);
+
+    loadCell.set_scale(CALIB_FACTOR);
 }
 
 void checkModeButton() {
@@ -123,32 +133,37 @@ void handleTestingMode() {
 }
 
 void loop() {
-    checkModeButton();
+    // checkModeButton();
     
-    if (!digitalRead(COMPRESSION_BUTTON_PIN)) {
-        unsigned long current_time = millis();
-        while(!digitalRead(COMPRESSION_BUTTON_PIN));
+    // if (!digitalRead(COMPRESSION_BUTTON_PIN)) {
+    //     unsigned long current_time = millis();
+    //     while(!digitalRead(COMPRESSION_BUTTON_PIN));
         
-        // Time-based decay logic
-        const unsigned long DECAY_THRESHOLD = 2000; // 2 seconds without compression
-        if (current_time - last_compression > DECAY_THRESHOLD && compression_times.size() > 0) {
-            compression_times.erase(compression_times.begin());
-        }
+    //     // Time-based decay logic
+    //     const unsigned long DECAY_THRESHOLD = 2000; // 2 seconds without compression
+    //     if (current_time - last_compression > DECAY_THRESHOLD && compression_times.size() > 0) {
+    //         compression_times.erase(compression_times.begin());
+    //     }
 
-        // Add new timestamp only if it's a valid press
-        if (compression_times.size() >= SAMPLE_SIZE) {
-            compression_times.erase(compression_times.begin());
-        }
-        compression_times.push_back(current_time);
-        last_compression = current_time;
-    }
+    //     // Add new timestamp only if it's a valid press
+    //     if (compression_times.size() >= SAMPLE_SIZE) {
+    //         compression_times.erase(compression_times.begin());
+    //     }
+    //     compression_times.push_back(current_time);
+    //     last_compression = current_time;
+    // }
     
-    if (isTrainingMode) {
-        handleTrainingMode();
-    } else {
-        handleTestingMode();
-    }
+    // if (isTrainingMode) {
+    //     handleTrainingMode();
+    // } else {
+    //     handleTestingMode();
+    // }
 
+    /* testing hx711 (delete later on) */
+    float load = measureLoadCell(loadCell, LC_DATA_PIN, LC_CLK_PIN);
+    Serial.print("Load: ");
+    Serial.println(load);
+    delay(1000);
 }
 
 
