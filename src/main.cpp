@@ -122,6 +122,11 @@ float handleTrainingMode() {
 
         if (is_consistent && avg_bpm >= MIN_BPM && avg_bpm <= MAX_BPM) {
             digitalWrite(LED_BUILTIN, HIGH);
+            clearOled(display);
+            delay(2);
+            setText(display, "Good Pace!");
+            delay(2);
+            display.display();
             Serial.println("Good compression rate and consistency!");
         } else {
             digitalWrite(LED_BUILTIN, LOW);
@@ -131,16 +136,16 @@ float handleTrainingMode() {
             if (avg_bpm > MAX_BPM) {
                 Serial.println("Too Fast!");
                 clearOled(display);
-                delay(50);
+                delay(2);
                 setText(display, "Too Fast!");
-                delay(50);
+                delay(2);
                 display.display();
             } else if (avg_bpm < MIN_BPM) {
                 Serial.println("Too Slow!");
                 clearOled(display);
-                delay(50);
+                delay(2);
                 setText(display, "Too Slow!");
-                delay(50);
+                delay(2);
                 display.display();
             }
         }
@@ -205,31 +210,19 @@ void loop() {
               delay(600);
           }
     }
-    char pressed = 0;
+    bool pressed = 0;
     BLEDevice central = BLE.central();
     if (central) {
         Serial.print("Connected to central: ");
         Serial.println(central.address());
     }
   
-    /* REPLACING LOGIC PART 1 */
-    // if (!digitalRead(COMPRESSION_BUTTON_PIN)) {
-    //     pressed = 1;
-    //     unsigned long current_time = millis();
-    //     while(!digitalRead(COMPRESSION_BUTTON_PIN));
-
-    //     // Add new timestamp only if it's a valid press
-    //     if (compression_times.size() >= SAMPLE_SIZE) {
-    //         compression_times.erase(compression_times.begin());
-    //     }
-    //     compression_times.push_back(current_time);
-    //     last_compression = current_time;
-    // }
-        /* this is the replaced one */
+  
     // user's compression reaches minimum threshold
     if ((force = measureLoadCell(loadCell, LC_DATA_PIN, LC_CLK_PIN)) >= 3500.0)
     {
         compressed = true;
+        pressed = 1;
         unsigned long currentTime = millis();
         Serial.println("Pressed!");
         delay(5);
@@ -241,7 +234,7 @@ void loop() {
             
             force = measureLoadCell(loadCell, LC_DATA_PIN, LC_CLK_PIN);
             
-            if (force < currForce - 100) 
+            if (force < currForce - 500) 
             {
                 compressed = false;
                 Serial.println("Released!");
@@ -256,6 +249,8 @@ void loop() {
             //     delay(20);
             // }
         } while (compressed);
+        delay(2);
+        Serial.println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 
         if (compression_times.size() >= SAMPLE_SIZE) {
             compression_times.erase(compression_times.begin());
@@ -270,9 +265,9 @@ void loop() {
 
     /* UNCOMMENT ALL BELOW!!! */
     // Time-based decay logic — reset BPM and clear history if idle too long
-    const unsigned long DECAY_THRESHOLD = 3000; // 3 seconds
+    const unsigned long DECAY_THRESHOLD = 4200; // 3 seconds
     if (millis() - last_compression > DECAY_THRESHOLD && !compression_times.empty()) {
-        Serial.println("No compressions detected for 3 seconds. Resetting...");
+        Serial.println("No compressions detected for 4 seconds. Resetting...");
         compression_times.clear();  // Clear for new set
         last_compression = millis(); // Avoid repeated clearing
         if (central && central.connected()) {
@@ -283,6 +278,7 @@ void loop() {
     if (isTrainingMode) {
         float avg_bpm = handleTrainingMode();
         if (central.connected() && pressed) {
+            Serial.println("OOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
             numberCharacteristic.writeValue(avg_bpm);
         }
     } else {

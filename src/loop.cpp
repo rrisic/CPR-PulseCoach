@@ -5,17 +5,17 @@ float measureLoadCell(HX711 &loadCell, const int dataPin, const int clkPin)
     constexpr int NUM_SAMPLES = 3;
     constexpr int G_PER_KG = 1000;
     float load = 0.0f;
-    delay(5);
+    // delay(5);
 
     // .get_units() averages n number of readings in grams
-    load = loadCell.get_units(NUM_SAMPLES);
+    load = loadCell.get_units();
 
     // if (Serial)
     // {
     //     Serial.print("LoadCell: AVG LOAD MEASUREMENT: ");
     //     Serial.println(load);
     // }
-    delay(5);
+    // delay(5);
 
     return load;
 }
