@@ -186,7 +186,8 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
   }
 
   void showTimerPopup(BuildContext context) {
-    int timeLeft = 30;
+    int countdown = 3; // Start from 3 for "Starting test in"
+    String title = "Starting test in";
     Timer? timer;
 
     showDialog(
@@ -196,21 +197,25 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
         return StatefulBuilder(
           builder: (context, setPopupState) {
             timer ??= Timer.periodic(Duration(seconds: 1), (Timer t) {
-              if (timeLeft > 0) {
-                timeLeft--;
-                setPopupState(() {}); // Trigger rebuild of popup UI
-              } else {
-                t.cancel();
-                Navigator.of(context).pop(); // Close timer popup
-                //showScorePopup(context); // Show score popup
-              }
+              setPopupState(() {
+                countdown--;
+                if (countdown == 0 && title == "Starting test in") {
+                  // Switch to Timer stage
+                  title = "Timer";
+                  countdown = 30;
+                } else if (countdown == 0 && title == "Timer") {
+                  t.cancel();
+                  Navigator.of(context).pop();
+                }
+              });
             });
 
             return AlertDialog(
-              title: Text("Timer"),
+              title: Center(child: Text(title)),
               content: Text(
-                "Time remaining: $timeLeft seconds",
-                style: TextStyle(fontSize: 20),
+                "$countdown",
+                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
               ),
               actions: [
                 TextButton(
