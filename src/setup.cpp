@@ -10,6 +10,7 @@ void buttonSetup(const int pinNum)
     pinMode(pinNum, INPUT_PULLUP);
 }
 
+/* UNUSED FUNCTION. DO NOT USE. CALIBRATION HAS BEEN RUN PRIOR TO CODING THIS */
 float loadCellCalibrate(HX711 &loadCell, const int dataPin, const int clkPin, const int btnPin, const float knownWeight)
 {
     // Number of weight samples averaged per reading

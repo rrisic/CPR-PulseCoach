@@ -19,8 +19,8 @@ using namespace std;
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
-#define  LC_DATA_PIN   3
-#define  LC_CLK_PIN    7
+#define  LC_DATA_PIN   4
+#define  LC_CLK_PIN    3
 #define  BTN_1_PIN     2
 
 #define OLED_RESET     -1
@@ -30,7 +30,7 @@ using namespace std;
 constexpr int COMPRESSION_BUTTON_PIN = 2;
 constexpr int MODE_BUTTON_PIN = 4;
 constexpr int TEST_DURATION = 30000;
-
+constexpr float CALIB_FACTOR = 117.58f;
 // Global variables
 bool isTrainingMode = true;
 vector<unsigned long> compression_times;
@@ -51,34 +51,47 @@ void setup() {
     //OLED setup
     oledSetup(display, SSD1306_SWITCHCAPVCC, I2C_ADDRESS);
 
-    // //bluetooth setup
-    // BLE.begin();
-    // BLE.setLocalName("Arduino R4 WiFi");
-    // BLE.setAdvertisedService(customService);
-    // customService.addCharacteristic(testCharacteristic);
-    // customService.addCharacteristic(numberCharacteristic);
-    // customService.addCharacteristic(resultCharacteristic);
-    // BLE.addService(customService);
-    // testCharacteristic.writeValue(0); // Initial value for testing
-    // numberCharacteristic.writeValue(0); // Initial value for the number
-    // resultCharacteristic.writeValue(0); // Initial Result
+    //bluetooth setup
+    BLE.begin();
+    BLE.setLocalName("Arduino R4 WiFi");
+    BLE.setAdvertisedService(customService);
+    customService.addCharacteristic(testCharacteristic);
+    customService.addCharacteristic(numberCharacteristic);
+    customService.addCharacteristic(resultCharacteristic);
+    BLE.addService(customService);
+    testCharacteristic.writeValue(0); // Initial value for testing
+    numberCharacteristic.writeValue(0); // Initial value for the number
+    resultCharacteristic.writeValue(0); // Initial Result
 
-    // BLE.advertise();
-    // Serial.println("BLE Peripheral - Arduino R4 WiFi is now advertising...");
-
-    // pinMode(COMPRESSION_BUTTON_PIN, INPUT_PULLUP);
-    // pinMode(MODE_BUTTON_PIN, INPUT_PULLUP);
-    // pinMode(LED_BUILTIN, OUTPUT);
-    // compression_times.reserve(SAMPLE_SIZE);
+    BLE.advertise();
+    Serial.println("BLE Peripheral - Arduino R4 WiFi is now advertising...");
+  
+    pinMode(COMPRESSION_BUTTON_PIN, INPUT_PULLUP);
+    pinMode(MODE_BUTTON_PIN, INPUT_PULLUP);
+    pinMode(LED_BUILTIN, OUTPUT);
+    compression_times.reserve(SAMPLE_SIZE);
     Serial.begin(9600);
     while (!Serial);
     Serial.println("Starting program...");
 
+    /* TEST hx711 */
+    loadCell.begin(LC_DATA_PIN, LC_CLK_PIN);
+    while (!loadCell.is_ready()) {Serial.println("Load Cell NOT DETECTED!");}
+    Serial.println("TARING!");
+    delay(3000);
+    loadCell.tare();
+    delay(500);
+
+    loadCell.set_scale(CALIB_FACTOR);
+    /* END TEST HX711*/
+
+    /* OLED DISPLAY */
     clearOled(display);
     delay(50);
     setText(display, "Hello World!");
     display.display();
     delay(100);
+    /* END OLED DISPLAY */
 }
 
 void checkModeButton() {
@@ -180,6 +193,14 @@ float handleTestingMode(bool& shouldSwitchToTraining, float& accuracy, float& co
 
 
 void loop() {
+
+    /* testing hx711 (delete later on) */
+    float load = measureLoadCell(loadCell, LC_DATA_PIN, LC_CLK_PIN);
+    Serial.print("Load: ");
+    Serial.println(load);
+    delay(1000);
+   /* END OF TESTING HX711 */
+  
     bool oldTraining = isTrainingMode;
     checkModeButton();
     if (oldTraining != isTrainingMode){
@@ -247,7 +268,6 @@ void loop() {
         }
 
       }
-    
 }
 
 
