@@ -10,7 +10,7 @@ void buttonSetup(const int pinNum)
     pinMode(pinNum, INPUT_PULLUP);
 }
 
-float loadCellCalibrate(HX711 loadCell, const int dataPin, const int clkPin, const int btnPin, const float knownWeight)
+float loadCellCalibrate(HX711 &loadCell, const int dataPin, const int clkPin, const int btnPin, const float knownWeight)
 {
     // Number of weight samples averaged per reading
     constexpr int NUM_SAMPLES = 10;
@@ -55,12 +55,12 @@ float loadCellCalibrate(HX711 loadCell, const int dataPin, const int clkPin, con
     return calibrationFactor;
 }
 
-bool oledSetup(Adafruit_SSD1306 display, const int SSD1306, const int i2cAddress)
+bool oledSetup(Adafruit_SSD1306 &display, const int SSD1306, const int i2cAddress)
 {
     if (!display.begin(SSD1306, i2cAddress)) {
         if (Serial) Serial.println("SSD1306 allocation failed");
-            delay(20);
-            return false;
+        delay(20);
+        return false;
     }
     if (Serial) Serial.println("Found OLED!");    
     return true;   

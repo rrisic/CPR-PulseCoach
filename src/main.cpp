@@ -51,28 +51,34 @@ void setup() {
     //OLED setup
     oledSetup(display, SSD1306_SWITCHCAPVCC, I2C_ADDRESS);
 
-    //bluetooth setup
-    BLE.begin();
-    BLE.setLocalName("Arduino R4 WiFi");
-    BLE.setAdvertisedService(customService);
-    customService.addCharacteristic(testCharacteristic);
-    customService.addCharacteristic(numberCharacteristic);
-    customService.addCharacteristic(resultCharacteristic);
-    BLE.addService(customService);
-    testCharacteristic.writeValue(0); // Initial value for testing
-    numberCharacteristic.writeValue(0); // Initial value for the number
-    resultCharacteristic.writeValue(0); // Initial Result
+    // //bluetooth setup
+    // BLE.begin();
+    // BLE.setLocalName("Arduino R4 WiFi");
+    // BLE.setAdvertisedService(customService);
+    // customService.addCharacteristic(testCharacteristic);
+    // customService.addCharacteristic(numberCharacteristic);
+    // customService.addCharacteristic(resultCharacteristic);
+    // BLE.addService(customService);
+    // testCharacteristic.writeValue(0); // Initial value for testing
+    // numberCharacteristic.writeValue(0); // Initial value for the number
+    // resultCharacteristic.writeValue(0); // Initial Result
 
-    BLE.advertise();
-    Serial.println("BLE Peripheral - Arduino R4 WiFi is now advertising...");
+    // BLE.advertise();
+    // Serial.println("BLE Peripheral - Arduino R4 WiFi is now advertising...");
 
-    pinMode(COMPRESSION_BUTTON_PIN, INPUT_PULLUP);
-    pinMode(MODE_BUTTON_PIN, INPUT_PULLUP);
-    pinMode(LED_BUILTIN, OUTPUT);
-    compression_times.reserve(SAMPLE_SIZE);
+    // pinMode(COMPRESSION_BUTTON_PIN, INPUT_PULLUP);
+    // pinMode(MODE_BUTTON_PIN, INPUT_PULLUP);
+    // pinMode(LED_BUILTIN, OUTPUT);
+    // compression_times.reserve(SAMPLE_SIZE);
     Serial.begin(9600);
     while (!Serial);
     Serial.println("Starting program...");
+
+    clearOled(display);
+    delay(50);
+    setText(display, "Hello World!");
+    display.display();
+    delay(100);
 }
 
 void checkModeButton() {
@@ -162,50 +168,52 @@ float handleTestingMode() {
         Serial.println(" seconds");
         return 0;
     }
+    
 }
 
 void loop() {
-    bool oldTraining = isTrainingMode;
-    checkModeButton();
-    if (oldTraining != isTrainingMode){
-      testCharacteristic.writeValue(1); // start test
-    }
-    char pressed = 0;
-    BLEDevice central = BLE.central();
-    if (central) {
-        Serial.print("Connected to central: ");
-        Serial.println(central.address());
-    }
+    // bool oldTraining = isTrainingMode;
+    // checkModeButton();
+    // if (oldTraining != isTrainingMode){
+    //   testCharacteristic.writeValue(1); // start test
+    // }
+    // char pressed = 0;
+    // BLEDevice central = BLE.central();
+    // if (central) {
+    //     Serial.print("Connected to central: ");
+    //     Serial.println(central.address());
+    // }
 
-    if (!digitalRead(COMPRESSION_BUTTON_PIN)) {
-        pressed = 1;
-        unsigned long current_time = millis();
-        while(!digitalRead(COMPRESSION_BUTTON_PIN));
+    // if (!digitalRead(COMPRESSION_BUTTON_PIN)) {
+    //     pressed = 1;
+    //     unsigned long current_time = millis();
+    //     while(!digitalRead(COMPRESSION_BUTTON_PIN));
 
-        // Add new timestamp only if it's a valid press
-        if (compression_times.size() >= SAMPLE_SIZE) {
-            compression_times.erase(compression_times.begin());
-        }
-        compression_times.push_back(current_time);
-        last_compression = current_time;
-    }
-    // Time-based decay logic
-    const unsigned long DECAY_THRESHOLD = 2000; // 2 seconds without compression
-    if (millis() - last_compression > DECAY_THRESHOLD && compression_times.size() > 0) {
-        compression_times.erase(compression_times.begin());
-    }
+    //     // Add new timestamp only if it's a valid press
+    //     if (compression_times.size() >= SAMPLE_SIZE) {
+    //         compression_times.erase(compression_times.begin());
+    //     }
+    //     compression_times.push_back(current_time);
+    //     last_compression = current_time;
+    // }
+    // // Time-based decay logic
+    // const unsigned long DECAY_THRESHOLD = 2000; // 2 seconds without compression
+    // if (millis() - last_compression > DECAY_THRESHOLD && compression_times.size() > 0) {
+    //     compression_times.erase(compression_times.begin());
+    // }
     
-    if (isTrainingMode) {
-        float avg_bpm = handleTrainingMode();
-        if (central.connected() && pressed) {
-            numberCharacteristic.writeValue(avg_bpm);
-        }
-    } else {
-        float test_avg_bpm = handleTestingMode();
-        if (central.connected() && pressed && test_avg_bpm != 0) {
-          resultCharacteristic.writeValue(test_avg_bpm);
-      }
-    }
+    // if (isTrainingMode) {
+    //     float avg_bpm = handleTrainingMode();
+    //     if (central.connected() && pressed) {
+    //         numberCharacteristic.writeValue(avg_bpm);
+    //     }
+    // } else {
+    //     float test_avg_bpm = handleTestingMode();
+    //     if (central.connected() && pressed && test_avg_bpm != 0) {
+    //       resultCharacteristic.writeValue(test_avg_bpm);
+    //   }
+    // }
+    
     
 }
 
