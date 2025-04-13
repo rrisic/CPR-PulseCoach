@@ -452,9 +452,9 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
         );
       }
 
-      device.state.listen((state) {
+      device.connectionState.listen((state) {
         print('Device state changed: $state');
-        if (state == BluetoothDeviceState.disconnected) {
+        if (state == BluetoothConnectionState.disconnected) {
           setState(() {
             connectedDevice = null;
             testCharacteristic = null;
