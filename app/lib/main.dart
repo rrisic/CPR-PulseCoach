@@ -6,6 +6,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
 
+// Starting test in 321
+// Timer: 30 - 1 seconds
+
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
@@ -142,6 +145,7 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
   BluetoothCharacteristic? testResultCharacteristic;
   bool ledState = false;
   int receivedNumber = 0;
+  double currBPS = 2.0;
 
   // Audio file selection
   final List<Map<String, String>> audioFiles = [
@@ -174,7 +178,7 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
     // Initialize animation controller for pulsating effect
     _animationController = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: 582), // Duration of one heartbeat cycle
+      duration: Duration(milliseconds: (1000 / currBPS).round()), // Duration of one heartbeat cycle
     )..repeat(reverse: true); // Repeat the animation, reversing direction
 
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
@@ -186,7 +190,8 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
   }
 
   void showTimerPopup(BuildContext context) {
-    int timeLeft = 30;
+    int countdown = 3; // Start from 3 for "Starting test in"
+    String title = "Starting test in";
     Timer? timer;
 
     showDialog(
@@ -196,21 +201,25 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
         return StatefulBuilder(
           builder: (context, setPopupState) {
             timer ??= Timer.periodic(Duration(seconds: 1), (Timer t) {
-              if (timeLeft > 0) {
-                timeLeft--;
-                setPopupState(() {}); // Trigger rebuild of popup UI
-              } else {
-                t.cancel();
-                Navigator.of(context).pop(); // Close timer popup
-                //showScorePopup(context); // Show score popup
-              }
+              setPopupState(() {
+                countdown--;
+                if (countdown == 0 && title == "Starting test in") {
+                  // Switch to Timer stage
+                  title = "Timer";
+                  countdown = 30;
+                } else if (countdown == 0 && title == "Timer") {
+                  t.cancel();
+                  Navigator.of(context).pop();
+                }
+              });
             });
 
             return AlertDialog(
-              title: Text("Timer"),
+              title: Center(child: Text(title)),
               content: Text(
-                "Time remaining: $timeLeft seconds",
-                style: TextStyle(fontSize: 20),
+                "$countdown",
+                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
               ),
               actions: [
                 TextButton(
@@ -528,7 +537,12 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
   }
   double _calculateAverage() {
     if (recentNumbers.isEmpty) return 0.0;
-    return recentNumbers.reduce((a, b) => a + b) / recentNumbers.length;
+    double bps = recentNumbers.reduce((a, b) => a + b) / recentNumbers.length;
+    currBPS = bps;
+    if(currBPS == 0){
+      currBPS = 1.0;
+    }
+    return bps;
   }
   @override
   Widget build(BuildContext context) {
@@ -619,7 +633,6 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
           SizedBox(height: 20),
           // Input Section
           
-
           // Graph Section
           Expanded(
             child: LineChart(
@@ -774,6 +787,13 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
           ),
           SizedBox(height: 80),
 
+          ElevatedButton(
+            onPressed: () {
+              showTimerPopup(context);
+            },
+            child: Text('Start Timer'),
+          ),
+
           // Bluetooth Scan Button
           ElevatedButton(
             onPressed: isScanning ? null : _startBluetoothScan,
@@ -801,7 +821,6 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
               },
             ),
           ),
-
         ],
       ),
     );
