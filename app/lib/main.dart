@@ -237,7 +237,7 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Your Score"),
+        title: Text("BPM"),
         content: Text(
           "$score",
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
