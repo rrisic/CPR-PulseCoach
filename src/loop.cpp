@@ -4,25 +4,18 @@ float measureLoadCell(HX711 loadCell, const int dataPin, const int clkPin)
 {
     constexpr int NUM_SAMPLES = 3;
     constexpr int G_PER_KG = 1000;
-    bool loadCellConnected = loadCell.is_ready();
-    float load = 0;
+    float load = 0.0f;
+    delay(50);
 
-    if (loadCellConnected) 
-    {
-        // .get_units() averages n number of readings in grams
-        load = loadCell.get_units(NUM_SAMPLES) / G_PER_KG;
+    // .get_units() averages n number of readings in grams
+    load = loadCell.get_units(NUM_SAMPLES);
 
-        if (Serial)
-        {
-            Serial.print("LoadCell: AVG LOAD MEASUREMENT: ");
-            Serial.println(load);
-        }
-        
-    } 
-    else 
+    if (Serial)
     {
-        if (Serial) Serial.println("Could not read data.");
+        Serial.print("LoadCell: AVG LOAD MEASUREMENT: ");
+        Serial.println(load);
     }
+    delay(10);
 
     return load;
 }
