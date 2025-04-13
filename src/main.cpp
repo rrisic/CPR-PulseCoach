@@ -1,11 +1,17 @@
 #include <vector>
 #include <Arduino.h>
+#include <ArduinoBLE.h>
 #include <Wire.h>
 #include "setup.h"
 #include "loop.h"
 
 #include "../include/song_setup.h"
 #include "../include/bpm_helper.h"
+
+// bluetooth service
+BLEService customService("19B10000-E8F2-537E-4F6C-D104768A1214");
+BLEByteCharacteristic ledCharacteristic("19B10001-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite);
+BLEIntCharacteristic numberCharacteristic("19B10002-E8F2-537E-4F6C-D104768A1214", BLERead | BLENotify);
 
 using namespace std;
 
@@ -40,6 +46,19 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 using namespace std;
 
 void setup() {
+    //bluetooth setup
+    BLE.begin();
+    BLE.setLocalName("Arduino R4 WiFi");
+    BLE.setAdvertisedService(customService);
+    customService.addCharacteristic(ledCharacteristic);
+    customService.addCharacteristic(numberCharacteristic);
+    BLE.addService(customService);
+    ledCharacteristic.writeValue(0); // Initial value for LED
+    numberCharacteristic.writeValue(0); // Initial value for the number
+
+    BLE.advertise();
+    Serial.println("BLE Peripheral - Arduino R4 WiFi is now advertising...");
+
     pinMode(COMPRESSION_BUTTON_PIN, INPUT_PULLUP);
     pinMode(MODE_BUTTON_PIN, INPUT_PULLUP);
     pinMode(LED_BUILTIN, OUTPUT);
@@ -65,9 +84,10 @@ void checkModeButton() {
     }
 }
 
-void handleTrainingMode() {
+float handleTrainingMode() {
+    float avg_bpm = 0;
     if (compression_times.size() >= 2) {
-        float avg_bpm = calculateWeightedAverageBPM(compression_times);
+        avg_bpm = calculateWeightedAverageBPM(compression_times);
         float std_dev = calculateBPMStandardDeviation(compression_times);
         bool is_consistent = isConsistentCompression(compression_times);
         
@@ -92,15 +112,16 @@ void handleTrainingMode() {
             }
         }
     }
+    return avg_bpm;
 }
 
-void handleTestingMode() {
+float handleTestingMode() {
     unsigned long current_time = millis();
     unsigned long elapsed_time = current_time - test_start_time;
-    
+    float avg_bpm = 0;
     if (elapsed_time >= TEST_DURATION) {
         if (compression_times.size() >= 2) {
-            float avg_bpm = calculateWeightedAverageBPM(compression_times);
+            avg_bpm = calculateWeightedAverageBPM(compression_times);
             float std_dev = calculateBPMStandardDeviation(compression_times);
             bool is_consistent = isConsistentCompression(compression_times);
             
@@ -120,20 +141,22 @@ void handleTestingMode() {
         Serial.print(remaining_seconds);
         Serial.println(" seconds");
     }
+    return avg_bpm;
 }
 
 void loop() {
     checkModeButton();
-    
+    char pressed = 0;
+    BLEDevice central = BLE.central();
+    if (central) {
+        Serial.print("Connected to central: ");
+        Serial.println(central.address());
+    }
+
     if (!digitalRead(COMPRESSION_BUTTON_PIN)) {
+        pressed = 1;
         unsigned long current_time = millis();
         while(!digitalRead(COMPRESSION_BUTTON_PIN));
-        
-        // Time-based decay logic
-        const unsigned long DECAY_THRESHOLD = 2000; // 2 seconds without compression
-        if (current_time - last_compression > DECAY_THRESHOLD && compression_times.size() > 0) {
-            compression_times.erase(compression_times.begin());
-        }
 
         // Add new timestamp only if it's a valid press
         if (compression_times.size() >= SAMPLE_SIZE) {
@@ -142,13 +165,21 @@ void loop() {
         compression_times.push_back(current_time);
         last_compression = current_time;
     }
-    
-    if (isTrainingMode) {
-        handleTrainingMode();
-    } else {
-        handleTestingMode();
+    // Time-based decay logic
+    const unsigned long DECAY_THRESHOLD = 2000; // 2 seconds without compression
+    if (millis() - last_compression > DECAY_THRESHOLD && compression_times.size() > 0) {
+        compression_times.erase(compression_times.begin());
     }
-
+    
+    float avg_bpm = 0;
+    if (isTrainingMode) {
+        avg_bpm = handleTrainingMode();
+    } else {
+        avg_bpm = handleTestingMode();
+    }
+    if (central.connected() && pressed) {
+        numberCharacteristic.writeValue(avg_bpm);
+    }
 }
 
 
