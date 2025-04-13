@@ -27,7 +27,6 @@ using namespace std;
 #define I2C_ADDRESS    0x3C  // Most SSD1306 I2C displays use 0x3C
 
 // Constants
-constexpr int COMPRESSION_BUTTON_PIN = 2;
 constexpr int MODE_BUTTON_PIN = 4;
 constexpr int TEST_DURATION = 30000;
 constexpr float CALIB_FACTOR = 117.58f;
@@ -66,7 +65,6 @@ void setup() {
     BLE.advertise();
     Serial.println("BLE Peripheral - Arduino R4 WiFi is now advertising...");
   
-    pinMode(COMPRESSION_BUTTON_PIN, INPUT_PULLUP);
     pinMode(MODE_BUTTON_PIN, INPUT_PULLUP);
     pinMode(LED_BUILTIN, OUTPUT);
     compression_times.reserve(SAMPLE_SIZE);
@@ -120,14 +118,13 @@ float handleTrainingMode() {
         Serial.print(std_dev);
         Serial.println(")");
 
-        if (is_consistent && avg_bpm >= MIN_BPM && avg_bpm <= MAX_BPM) {
+        if (avg_bpm >= MIN_BPM && avg_bpm <= MAX_BPM) {
             digitalWrite(LED_BUILTIN, HIGH);
             clearOled(display);
             delay(2);
-            setText(display, "Good Pace!");
+            setStackedText(display, "GOOD", "PACE", 2, SSD1306_WHITE);
             delay(2);
             display.display();
-            Serial.println("Good compression rate and consistency!");
         } else {
             digitalWrite(LED_BUILTIN, LOW);
             if (!is_consistent) {
@@ -137,14 +134,14 @@ float handleTrainingMode() {
                 Serial.println("Too Fast!");
                 clearOled(display);
                 delay(2);
-                setText(display, "Too Fast!");
+                setStackedText(display, "TOO", "FAST", 2, SSD1306_WHITE);
                 delay(2);
                 display.display();
             } else if (avg_bpm < MIN_BPM) {
                 Serial.println("Too Slow!");
                 clearOled(display);
                 delay(2);
-                setText(display, "Too Slow!");
+                setStackedText(display, "TOO", "SLOW", 2, SSD1306_WHITE);
                 delay(2);
                 display.display();
             }
@@ -268,6 +265,8 @@ void loop() {
     const unsigned long DECAY_THRESHOLD = 4200; // 3 seconds
     if (millis() - last_compression > DECAY_THRESHOLD && !compression_times.empty()) {
         Serial.println("No compressions detected for 4 seconds. Resetting...");
+        clearOled(display);
+        setStackedText(display, "NO", "BPM", 2, SSD1306_WHITE);
         compression_times.clear();  // Clear for new set
         last_compression = millis(); // Avoid repeated clearing
         if (central && central.connected()) {
@@ -292,7 +291,7 @@ void loop() {
             // Send results once
             if (central && central.connected()) {
                 delay(2000);
-                resultCharacteristic.writeValue(test_avg_bpm); // You can add new BLECharacteristics for accuracy & consistency if needed
+                resultCharacteristic.writeValue(test_avg_bpm * 1000 + accuracy * 100); // sends "encrypted" value containing bpm (top 3 digits) and accuracy (bottom 3 digits, 0-100)
                 Serial.println("Sent test results to Flutter app.");
             }
 

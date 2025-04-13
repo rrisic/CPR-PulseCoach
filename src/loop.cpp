@@ -26,13 +26,33 @@ void clearOled(Adafruit_SSD1306 &display)
     display.setCursor(0, 0);
 }
 
-void setText(Adafruit_SSD1306 &display, const char *message, int textSize, int color, int x, int y)
+void setStackedText(Adafruit_SSD1306 &display, const char *line1, const char *line2, int textSize, int color)
 {
     display.setTextSize(textSize);
     display.setTextColor(color);
-    display.setCursor(x, y);
-    display.println(message);
-    // display.display();
+
+    // Measure both lines
+    int16_t x1, y1;
+    uint16_t w1, h1;
+    uint16_t w2, h2;
+
+    display.getTextBounds(line1, 0, 0, &x1, &y1, &w1, &h1);
+    display.getTextBounds(line2, 0, 0, &x1, &y1, &w2, &h2);
+
+    // Determine tallest height
+    int totalHeight = h1 + h2 + 2; // add spacing between lines
+    int yStart = (display.height() - totalHeight) / 2;
+
+    // Line 1 (top word)
+    int x1_pos = (display.width() - w1) / 2;
+    display.setCursor(x1_pos, yStart);
+    display.println(line1);
+
+    // Line 2 (bottom word)
+    int x2_pos = (display.width() - w2) / 2;
+    display.setCursor(x2_pos, yStart + h1 + 2); // +2 for spacing
+    display.println(line2);
 }
+
 
 
