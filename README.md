@@ -1,9 +1,9 @@
 # 🫀 **CPR PulseCoach**
-#### *Train to Save Lives — with Precision and Rhythm*
+#### *Turning rhythm into rescue*
 
 **CPR PulseCoach** is an embedded training device that helps civilians and first responders alike improve their CPR timing and rhythm. Built for real-world readiness, it offers engaging modes, live performance feedback, and seamless mobile integration — all designed to help users master the life-saving skill of chest compressions.
 
-💡 *Built at [BitHacks] 2025 — Turning rhythm into rescue.*
+💡 *Built at UC Irvine's BitHacks 2025*
 
 ## 🚑 **What It Does**
 **CPR PulseCoach** is a smart CPR training tool that lets users practice and test their CPR technique with accurate, real-time feedback.
@@ -11,7 +11,6 @@
 - **Real-time BPM detection** via a load cell and amplifier
 - **Feedback delivered through:**
   - An OLED screen
-  - A mini metal speaker (metronome or song mode)
   - A color-coded interface (Too Slow, On Beat, Too Fast)
   - Wireless communication via Bluetooth
   - Companion Flutter mobile app for real-time plotting, audio feedback, and stats
@@ -21,7 +20,7 @@
 ### 🟢 **Training Mode** ("Freeplay")
 **Visual feedback of:**
 - Live BPM
-- Target BPM (103 — AHA recommended rate)
+- Target BPM range within AHA recommended rate
 
 **Color or text indicators:**
 - ✅ **On beat**
@@ -30,7 +29,8 @@
 
 **Choose between:**
 - Metronome beat
-- Classic training songs like *Stayin' Alive* or *Mario Theme*
+- Classic training songs including *Stayin' Alive - Bee Gees* and *Allstar - Smashmouth*
+- Crowd panic ambience to simulate a realistic stressful environment
 
 ### 🔴 **Testing Mode** ("Simulation")
 - OLED displays a countdown timer only — *no live feedback*
@@ -47,13 +47,11 @@ The Flutter companion app enhances the CPR PulseCoach with:
 - 📊 **Real-time BPM graphing** in Training mode
 - 🔔 **Song/metronome selection**
 - 🎯 **Post-test analytics**: accuracy score, BPM consistency plot
-- 💾 **Optional session logging** for long-term tracking
 
 ## 🛠️ **Built With**
 - **Arduino UNO R4 WiFi**
 - **HX711 Amplifier + Load Cell**
 - **OLED Display** (128x64)
-- **Mini Metal Speaker**
 - **Flutter** (Dart) Mobile App
 - **PlatformIO + VSCode** for embedded development
 
