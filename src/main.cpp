@@ -74,7 +74,7 @@ void setup() {
     while (!Serial);
     Serial.println("Starting program...");
 
-    /* TEST hx711 */
+    /* TEST hx711 
     loadCell.begin(LC_DATA_PIN, LC_CLK_PIN);
     while (!loadCell.is_ready()) {Serial.println("Load Cell NOT DETECTED!");}
     Serial.println("TARING!");
@@ -83,33 +83,34 @@ void setup() {
     delay(500);
 
     loadCell.set_scale(CALIB_FACTOR);
-    /* END TEST HX711*/
+    // END TEST HX711
 
-    /* OLED DISPLAY */
+    // OLED DISPLAY
     clearOled(display);
     delay(50);
     setText(display, "Hello World!");
     display.display();
     delay(100);
-    /* END OLED DISPLAY */
+    // END OLED DISPLAY
+    */
 }
 
 void checkModeButton() {
     unsigned long current_time = millis();
     if (!digitalRead(MODE_BUTTON_PIN) && (current_time - last_mode_button_press > MODE_DEBOUNCE)) {
-    last_mode_button_press = current_time;
-    isTrainingMode = !isTrainingMode;
-    
-    compression_times.clear();  // Clear history on mode switch
+        last_mode_button_press = current_time;
+        isTrainingMode = !isTrainingMode;
+        
+        compression_times.clear();  // Clear history on mode switch
 
-    if (isTrainingMode) {
-        Serial.println("Switched to Training Mode");
-    } else {
-        Serial.println("Switched to Testing Mode");
-        test_start_time = millis();
-        test_button_presses = 0;
+        if (isTrainingMode) {
+            Serial.println("Switched to Training Mode");
+        } else {
+            Serial.println("Switched to Testing Mode");
+            test_start_time = millis() + 3000;
+            test_button_presses = 0;
+        }
     }
-}
 }
 
 float handleTrainingMode() {
@@ -194,17 +195,23 @@ float handleTestingMode(bool& shouldSwitchToTraining, float& accuracy, float& co
 
 void loop() {
 
-    /* testing hx711 (delete later on) */
+    /* 
+    //testing hx711 (delete later on)
     float load = measureLoadCell(loadCell, LC_DATA_PIN, LC_CLK_PIN);
     Serial.print("Load: ");
     Serial.println(load);
     delay(1000);
-   /* END OF TESTING HX711 */
+   // END OF TESTING HX711 
+   */
   
     bool oldTraining = isTrainingMode;
     checkModeButton();
     if (oldTraining != isTrainingMode){
       testCharacteristic.writeValue(1); // start test
+      for (int i = 0; i < 5; i++) {
+              numberCharacteristic.writeValue(0);
+              delay(600);
+          }
     }
     char pressed = 0;
     BLEDevice central = BLE.central();
@@ -246,13 +253,12 @@ void loop() {
         static unsigned long testEndTime = 0;
         bool switchToTraining = false;
         float accuracy = 0.0, consistency = 0.0;
-
         float test_avg_bpm = handleTestingMode(switchToTraining, accuracy, consistency);
 
         if (switchToTraining && !waitingToSwitch) {
             // Send results once
             if (central && central.connected()) {
-                delay(500);
+                delay(2000);
                 resultCharacteristic.writeValue(test_avg_bpm); // You can add new BLECharacteristics for accuracy & consistency if needed
                 Serial.println("Sent test results to Flutter app.");
             }
