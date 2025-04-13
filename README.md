@@ -54,6 +54,8 @@ The Flutter companion app enhances the CPR PulseCoach with:
 - **OLED Display** (128x64)
 - **Flutter** (Dart) Mobile App
 - **PlatformIO + VSCode** for embedded development
+Outside Bill of Materials:
+https://docs.google.com/spreadsheets/d/1s3hhZBtb4kIeTuZiVuZkW2nTHrM9OWxuYVe5d_oYUjo/edit?usp=sharing
 
 ## 🧠 **Why It Matters**
 *Every second counts in a cardiac emergency* — but even trained individuals often struggle to keep a proper compression pace under stress. **CPR PulseCoach** makes high-quality CPR accessible, engaging, and portable, helping users turn practice into instinct.
