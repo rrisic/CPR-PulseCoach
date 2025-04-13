@@ -5,6 +5,20 @@
 
 💡 *Built at UC Irvine's BitHacks 2025*
 
+## 🛠️ **Built With**
+- **Arduino UNO R4 WiFi**
+- **HX711 Amplifier + Load Cell**
+- **OLED Display** (128x64)
+- **Flutter** (Dart) Mobile App
+- **PlatformIO + VSCode** for embedded development
+Outside Bill of Materials:
+https://docs.google.com/spreadsheets/d/1s3hhZBtb4kIeTuZiVuZkW2nTHrM9OWxuYVe5d_oYUjo/edit?usp=sharing
+
+## 🧠 **Why It Matters**
+*Every second counts in a cardiac emergency* — but even trained individuals often struggle to keep a proper compression pace under stress. **CPR PulseCoach** makes high-quality CPR accessible, engaging, and portable, helping users turn practice into instinct.
+
+Whether you're a medical student, paramedic, or just someone who wants to be ready — **CPR PulseCoach** helps you stay on beat when it matters most.
+
 ## 🚑 **What It Does**
 **CPR PulseCoach** is a smart CPR training tool that lets users practice and test their CPR technique with accurate, real-time feedback.
 
@@ -38,33 +52,15 @@
 - Performance is logged via Bluetooth to the app
 - Optional "ambient/emergency" noise to mimic stressful real-world environment
 
-**After the session:**
-- App displays accuracy score and timing graph
-
 ## 📱 **Mobile App** (Flutter)
 The Flutter companion app enhances the CPR PulseCoach with:
 
 - 📊 **Real-time BPM graphing** in Training mode
 - 🔔 **Song/metronome selection**
-- 🎯 **Post-test analytics**: accuracy score, BPM consistency plot
-
-## 🛠️ **Built With**
-- **Arduino UNO R4 WiFi**
-- **HX711 Amplifier + Load Cell**
-- **OLED Display** (128x64)
-- **Flutter** (Dart) Mobile App
-- **PlatformIO + VSCode** for embedded development
-
-Outside Bill of Materials:
-https://docs.google.com/spreadsheets/d/1s3hhZBtb4kIeTuZiVuZkW2nTHrM9OWxuYVe5d_oYUjo/edit?usp=sharing
-
-## 🧠 **Why It Matters**
-*Every second counts in a cardiac emergency* — but even trained individuals often struggle to keep a proper compression pace under stress. **CPR PulseCoach** makes high-quality CPR accessible, engaging, and portable, helping users turn practice into instinct.
-
-Whether you're a medical student, paramedic, or just someone who wants to be ready — **CPR PulseCoach** helps you stay on beat when it matters most.
+- 🎯 **Post-test analytics**
 
 ## 📸 **Demo**
-⚡ *Coming soon: Check out our demo video and app screenshots!*
+⚡ *[Check out our demo video!](https://youtu.be/5pr09n2aI4U)*
 
 ## 🤝 **Team**
 *Built with care by Ryder Risic, Youngwoo Chang, Evan Velek, Ethan Vo*
