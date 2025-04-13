@@ -11,7 +11,6 @@
 - **Real-time BPM detection** via a load cell and amplifier
 - **Feedback delivered through:**
   - An OLED screen
-  - A mini metal speaker (metronome or song mode)
   - A color-coded interface (Too Slow, On Beat, Too Fast)
   - Wireless communication via Bluetooth
   - Companion Flutter mobile app for real-time plotting, audio feedback, and stats
