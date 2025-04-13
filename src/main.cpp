@@ -19,7 +19,7 @@ using namespace std;
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
-#define  LC_DATA_PIN   4
+#define  LC_DATA_PIN   7
 #define  LC_CLK_PIN    3
 #define  BTN_1_PIN     2
 
@@ -74,24 +74,26 @@ void setup() {
     while (!Serial);
     Serial.println("Starting program...");
 
-    /* TEST hx711 */
+    /* SETUP HX711 */
     loadCell.begin(LC_DATA_PIN, LC_CLK_PIN);
     while (!loadCell.is_ready()) {Serial.println("Load Cell NOT DETECTED!");}
     Serial.println("TARING!");
     delay(3000);
     loadCell.tare();
+    Serial.println("TARE COMPLETE!");
     delay(500);
-
     loadCell.set_scale(CALIB_FACTOR);
-    /* END TEST HX711*/
+    Serial.println("Calibration Complete!");
+    delay(500);
+    // /* END TEST HX711*/
 
-    /* OLED DISPLAY */
-    clearOled(display);
-    delay(50);
-    setText(display, "Hello World!");
-    display.display();
-    delay(100);
-    /* END OLED DISPLAY */
+    // /* OLED DISPLAY */
+    // clearOled(display);
+    // delay(50);
+    // setText(display, "Hello World!");
+    // display.display();
+    // delay(100);
+    // /* END OLED DISPLAY */
 }
 
 void checkModeButton() {
@@ -154,6 +156,7 @@ float handleTrainingMode() {
 }
 
 float handleTestingMode(bool& shouldSwitchToTraining, float& accuracy, float& consistency) {
+    clearOled(display);
     unsigned long current_time = millis();
     unsigned long elapsed_time = current_time - test_start_time;
 
@@ -193,14 +196,19 @@ float handleTestingMode(bool& shouldSwitchToTraining, float& accuracy, float& co
 
 
 void loop() {
-
-    /* testing hx711 (delete later on) */
-    float load = measureLoadCell(loadCell, LC_DATA_PIN, LC_CLK_PIN);
-    Serial.print("Load: ");
-    Serial.println(load);
-    delay(1000);
-   /* END OF TESTING HX711 */
+    // required force (grams) to trigger a compression
+    constexpr int FORCE_THRESH = 100;
+    bool compressed = false;
+    // number of compressions
+    int compressionCtr = 0;
+    float force;
   
+    // force = measureLoadCell(loadCell, LC_DATA_PIN, LC_CLK_PIN);
+    // Serial.print("Force Applied: ");
+    // Serial.println(force);
+    // delay(1000);
+
+    /* UNCOMMENT LATER!!! */
     bool oldTraining = isTrainingMode;
     checkModeButton();
     if (oldTraining != isTrainingMode){
@@ -212,19 +220,64 @@ void loop() {
         Serial.print("Connected to central: ");
         Serial.println(central.address());
     }
+  
+    /* REPLACING LOGIC PART 1 */
+    // if (!digitalRead(COMPRESSION_BUTTON_PIN)) {
+    //     pressed = 1;
+    //     unsigned long current_time = millis();
+    //     while(!digitalRead(COMPRESSION_BUTTON_PIN));
 
-    if (!digitalRead(COMPRESSION_BUTTON_PIN)) {
-        pressed = 1;
-        unsigned long current_time = millis();
-        while(!digitalRead(COMPRESSION_BUTTON_PIN));
+    //     // Add new timestamp only if it's a valid press
+    //     if (compression_times.size() >= SAMPLE_SIZE) {
+    //         compression_times.erase(compression_times.begin());
+    //     }
+    //     compression_times.push_back(current_time);
+    //     last_compression = current_time;
+    // }
+        /* this is the replaced one */
+    // user's compression reaches minimum threshold
+    if ((force = measureLoadCell(loadCell, LC_DATA_PIN, LC_CLK_PIN)) >= 3500.0)
+    {
+        compressed = true;
+        unsigned long currentTime = millis();
+        Serial.println("Pressed!");
+        delay(5);
+    
+        float currForce = force;
+        // hold while user's hand is pressed down
+        do 
+        {
+            
+            force = measureLoadCell(loadCell, LC_DATA_PIN, LC_CLK_PIN);
+            
+            if (force < currForce - 100) 
+            {
+                compressed = false;
+                Serial.println("Released!");
+            }
+            
+            currForce = force;
+            delay(5);
+            // if ((force = measureLoadCell(loadCell, LC_DATA_PIN, LC_CLK_PIN)) < 3500.0)
+            // {
+            //     compressed = false;
+            //     Serial.println("Released!");
+            //     delay(20);
+            // }
+        } while (compressed);
 
-        // Add new timestamp only if it's a valid press
         if (compression_times.size() >= SAMPLE_SIZE) {
             compression_times.erase(compression_times.begin());
         }
-        compression_times.push_back(current_time);
-        last_compression = current_time;
+
+        compression_times.push_back(currentTime);
+        last_compression = currentTime;
     }
+
+    /* END OF REPLACING LOGIC PART 1*/
+
+
+    /* UNCOMMENT ALL BELOW!!! */
     // Time-based decay logic — reset BPM and clear history if idle too long
     const unsigned long DECAY_THRESHOLD = 3000; // 3 seconds
     if (millis() - last_compression > DECAY_THRESHOLD && !compression_times.empty()) {
@@ -268,6 +321,7 @@ void loop() {
         }
 
       }
+      delay(10);
 }
 
 
