@@ -267,6 +267,7 @@ void loop() {
         Serial.println("No compressions detected for 4 seconds. Resetting...");
         clearOled(display);
         setStackedText(display, "NO", "BPM", 2, SSD1306_WHITE);
+        display.display();
         compression_times.clear();  // Clear for new set
         last_compression = millis(); // Avoid repeated clearing
         if (central && central.connected()) {
