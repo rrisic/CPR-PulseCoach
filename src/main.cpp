@@ -78,18 +78,19 @@ void setup() {
 void checkModeButton() {
     unsigned long current_time = millis();
     if (!digitalRead(MODE_BUTTON_PIN) && (current_time - last_mode_button_press > MODE_DEBOUNCE)) {
-        last_mode_button_press = current_time;
-        isTrainingMode = !isTrainingMode;
-        compression_times.clear();
-        
-        if (isTrainingMode) {
-            Serial.println("Switched to Training Mode");
-        } else {
-            Serial.println("Switched to Testing Mode");
-            test_start_time = millis();
-            test_button_presses = 0;
-        }
+    last_mode_button_press = current_time;
+    isTrainingMode = !isTrainingMode;
+    
+    compression_times.clear();  // Clear history on mode switch
+
+    if (isTrainingMode) {
+        Serial.println("Switched to Training Mode");
+    } else {
+        Serial.println("Switched to Testing Mode");
+        test_start_time = millis();
+        test_button_presses = 0;
     }
+}
 }
 
 float handleTrainingMode() {
@@ -133,28 +134,34 @@ float handleTrainingMode() {
     return avg_bpm;
 }
 
-float handleTestingMode() {
+float handleTestingMode(bool& shouldSwitchToTraining, float& accuracy, float& consistency) {
     unsigned long current_time = millis();
     unsigned long elapsed_time = current_time - test_start_time;
-    float avg_bpm = 0;
+
     if (elapsed_time >= TEST_DURATION) {
+        float avg_bpm = 0;
+
         if (compression_times.size() >= 2) {
-            avg_bpm = calculateWeightedAverageBPM(compression_times);
-            float std_dev = calculateBPMStandardDeviation(compression_times);
-            bool is_consistent = isConsistentCompression(compression_times);
-            
-            Serial.print("Test Complete. Average BPM: ");
+            avg_bpm = calculateWeightedAverageBPM(compression_times, compression_times.size());  // Use full history
+            float std_dev = calculateBPMStandardDeviation(compression_times, compression_times.size());
+
+            // Accuracy = closeness to target
+            accuracy = max(0.0f, 1.0f - fabs(avg_bpm - TARGET_BPM) / TARGET_BPM);  // 0–1 score
+
+            // Consistency = inverse of std dev
+            consistency = max(0.0f, 1.0f - std_dev / MAX_STD_DEV);  // 0–1 score
+
+            Serial.print("Test Complete. Avg BPM: ");
             Serial.print(avg_bpm);
-            Serial.print(" (Std Dev: ");
-            Serial.print(std_dev);
-            Serial.print(") - ");
-            Serial.println(is_consistent ? "Consistent" : "Inconsistent");
-            
-            compression_times.clear();
-            test_start_time = millis();
+            Serial.print(" | Accuracy: ");
+            Serial.print(accuracy);
+            Serial.print(" | Consistency: ");
+            Serial.println(consistency);
         }
-        isTrainingMode = true;
-        return test_button_presses / (TEST_DURATION / 60000);
+
+        compression_times.clear();  // Reset for next session
+        shouldSwitchToTraining = true;
+        return avg_bpm;
     } else {
         int remaining_seconds = (TEST_DURATION - elapsed_time) / 1000;
         Serial.print("Time remaining: ");
@@ -163,6 +170,7 @@ float handleTestingMode() {
         return 0;
     }
 }
+
 
 void loop() {
     bool oldTraining = isTrainingMode;
@@ -189,10 +197,15 @@ void loop() {
         compression_times.push_back(current_time);
         last_compression = current_time;
     }
-    // Time-based decay logic
-    const unsigned long DECAY_THRESHOLD = 2000; // 2 seconds without compression
-    if (millis() - last_compression > DECAY_THRESHOLD && compression_times.size() > 0) {
-        compression_times.erase(compression_times.begin());
+    // Time-based decay logic — reset BPM and clear history if idle too long
+    const unsigned long DECAY_THRESHOLD = 3000; // 3 seconds
+    if (millis() - last_compression > DECAY_THRESHOLD && !compression_times.empty()) {
+        Serial.println("No compressions detected for 3 seconds. Resetting...");
+        compression_times.clear();  // Clear for new set
+        last_compression = millis(); // Avoid repeated clearing
+        if (central && central.connected()) {
+            numberCharacteristic.writeValue(0); // Send BPM = 0 over BLE
+        }
     }
     
     if (isTrainingMode) {
@@ -201,11 +214,31 @@ void loop() {
             numberCharacteristic.writeValue(avg_bpm);
         }
     } else {
-        float test_avg_bpm = handleTestingMode();
-        if (central.connected() && pressed && test_avg_bpm != 0) {
-          resultCharacteristic.writeValue(test_avg_bpm);
+        static bool waitingToSwitch = false;
+        static unsigned long testEndTime = 0;
+        bool switchToTraining = false;
+        float accuracy = 0.0, consistency = 0.0;
+
+        float test_avg_bpm = handleTestingMode(switchToTraining, accuracy, consistency);
+
+        if (switchToTraining && !waitingToSwitch) {
+            // Send results once
+            if (central && central.connected()) {
+                resultCharacteristic.writeValue(test_avg_bpm); // You can add new BLECharacteristics for accuracy & consistency if needed
+                Serial.println("Sent test results to Flutter app.");
+            }
+
+            waitingToSwitch = true;
+            testEndTime = millis();
+        }
+
+        if (waitingToSwitch && millis() - testEndTime > 2000) {  // 2 second pause
+            isTrainingMode = true;
+            waitingToSwitch = false;
+            Serial.println("Auto-switched back to Training Mode.");
+        }
+
       }
-    }
     
 }
 
