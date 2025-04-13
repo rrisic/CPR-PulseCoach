@@ -114,7 +114,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: Text('Recent Inputs Graph'),
+          title: Text('CPR PulseCoach'),
         ),
         body: InputGraphWidget(),
       ),
@@ -135,7 +135,9 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
   bool isScanning = false;
   BluetoothDevice? connectedDevice;
   BluetoothCharacteristic? targetCharacteristic;
+  BluetoothCharacteristic? numberCharacteristic;
   bool ledState = false;
+  int receivedNumber = 0;
 
   // Audio file selection
   final List<Map<String, String>> audioFiles = [
@@ -143,7 +145,8 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
     {'name': 'Life is a Highway', 'path': 'highway.mp3'},
     {'name': 'Levitating', 'path': 'levitating.mp3'},
     {'name': 'All Star', 'path': 'allstar.mp3'},
-    {'name': 'Metronome', 'path': 'metronome.mp3'}
+    {'name': 'Metronome', 'path': 'metronome.mp3'},
+    {'name': 'Crowd Panic', 'path': 'panic.mp3'}
   ];
   String? selectedAudioPath = 'metronome.mp3';
 
@@ -154,6 +157,7 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
   final String targetDeviceName = "Arduino";
   final String serviceUuid = "19B10000-E8F2-537E-4F6C-D104768A1214";
   final String characteristicUuid = "19B10001-E8F2-537E-4F6C-D104768A1214";
+  final String numberCharacteristicUuid = "19B10002-E8F2-537E-4F6C-D104768A1214";
 
   @override
   void initState() {
@@ -165,10 +169,10 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
     // Initialize animation controller for pulsating effect
     _animationController = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: 800), // Duration of one heartbeat cycle
+      duration: Duration(milliseconds: 582), // Duration of one heartbeat cycle
     )..repeat(reverse: true); // Repeat the animation, reversing direction
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(
         parent: _animationController,
         curve: Curves.easeInOut,
@@ -307,7 +311,30 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
                 targetCharacteristic = characteristic;
               });
               print('Found target characteristic: $characteristicUuid');
-              break;
+            } if (characteristic.uuid.toString().toLowerCase() == numberCharacteristicUuid.toLowerCase()) {
+              setState(() {
+                numberCharacteristic = characteristic;
+              });
+              print('Found number characteristic: $numberCharacteristicUuid');
+              if (characteristic.properties.notify) {
+                await characteristic.setNotifyValue(true);
+                characteristic.lastValueStream.listen((value) {
+                  if (value.isNotEmpty) {
+                    int received = value[0] |
+                        (value[1] << 8) |
+                        (value[2] << 16) |
+                        (value[3] << 24);
+                    print('Received number: $received');
+                    setState(() {
+                      receivedNumber = received;
+                      if (recentNumbers.length >= 5) {
+                        recentNumbers.removeAt(0);
+                      }
+                      recentNumbers.add(received.toDouble());
+                    });
+                  }
+                });
+              }
             }
           }
         }
@@ -365,36 +392,76 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
   }
 
   double roundUpMaxY(double maxValue) {
-    if (maxValue <= 0) return 10.0;
+    if (maxValue <= 0) return 10.0; // Default for no data or negative values
 
+    // Determine the step size based on the magnitude of maxValue
     double step;
     if (maxValue <= 10) {
-      step = 2;
+      step = 2; // Small numbers: step by 2 (e.g., 2, 4, 6, 8, 10)
     } else if (maxValue <= 50) {
-      step = 10;
+      step = 10; // Medium numbers: step by 10 (e.g., 10, 20, 30, 40, 50)
     } else if (maxValue <= 200) {
-      step = 20;
+      step = 20; // Larger numbers: step by 20 (e.g., 20, 40, 60, 80, 100)
     } else {
-      step = 50;
+      step = 50; // Very large numbers: step by 50 (e.g., 50, 100, 150, 200)
     }
+
+    // Round up to the nearest step
     return (maxValue / step).ceil() * step;
   }
 
+  // function to color each point in the graph depending on if they are in range of good BPMs
+  Color bpmToGradientColor(double bpm) {
+    const Color goodColor = Colors.green;
+    const Color warningColor = Color(0xFFFFC107); // Amber/yellow
+    const Color dangerColor = Colors.red;
+    const int minBPM = 96;
+    const int maxBPM = 110;
+
+    if (bpm >= minBPM && bpm <= maxBPM) {
+      return goodColor;
+    } 
+    else if (bpm >= (minBPM * 3/4) && bpm < minBPM) {
+      // Below range but not bad
+      final ratio = (minBPM - bpm) / minBPM;
+      return Color.lerp(goodColor, warningColor, ratio.clamp(0.0, 1.0))!;
+    }
+    else if (bpm <= (maxBPM * 4/3) && bpm > maxBPM) {
+      // above range but not bad
+      final ratio = (bpm - maxBPM) / maxBPM;
+      return Color.lerp(goodColor, warningColor, ratio.clamp(0.0, 1.0))!;
+    }
+    else if (bpm >= (minBPM * 1/2) && bpm < (minBPM * 3/4)) {
+      // pretty bad below range
+      final ratio = (minBPM - bpm) / minBPM;
+      return Color.lerp(warningColor, dangerColor, ratio.clamp(0.0, 1.0))!;
+    }
+    else if (bpm <= (maxBPM * 2) && bpm > (maxBPM * 4/3)) {
+      // pretty bad above range
+      final ratio = (bpm - maxBPM) / maxBPM;
+      return Color.lerp(warningColor, dangerColor, ratio.clamp(0.0, 1.0))!;
+    }
+     else {
+      // very bad
+      return dangerColor;
+    }
+  }
   double _calculateAverage() {
     if (recentNumbers.isEmpty) return 0.0;
     return recentNumbers.reduce((a, b) => a + b) / recentNumbers.length;
   }
-
   @override
   Widget build(BuildContext context) {
+    // Calculate maxY dynamically, default to 10 if no data
     double maxY = recentNumbers.isNotEmpty
         ? recentNumbers.reduce((a, b) => a > b ? a : b)
         : 10.0;
-    maxY = roundUpMaxY(maxY);
+    maxY = roundUpMaxY(maxY); // Round up to a sensible value
 
+    // Calculate the interval for y-axis ticks to align with maxY
     double yInterval;
     if (maxY <= 10) {
-      yInterval = 2;
+      yInterval = 2; // Small steps for small maxY
     } else if (maxY <= 50) {
       yInterval = 10;
     } else if (maxY <= 200) {
@@ -409,24 +476,48 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Pulsating Average Value Display
+          // Pulsating Image and Average Value Display (Side by Side)
           Container(
             padding: EdgeInsets.symmetric(vertical: 10),
             alignment: Alignment.center,
-            child: AnimatedBuilder(
-              animation: _pulseAnimation,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: _pulseAnimation.value,
-                  child: Text(
-                    'Average: ${_calculateAverage().toStringAsFixed(1)}',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.redAccent,
-                    ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center, // Center the row contents
+              children: [
+                // Pulsating Image
+                AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _pulseAnimation.value,
+                      child: child,
+                    );
+                  },
+                  child: Image.asset(
+                    'assets/heart.png',
+                    width: 40, // Reduced size to fit better
+                    height: 40,
+                    colorBlendMode: BlendMode.dst,
                   ),
-                );
-              },
+                ),
+                SizedBox(width: 10), // Space between image and text
+                // Pulsating Average Value
+                AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _pulseAnimation.value,
+                      child: Text(
+                        'Average: ${_calculateAverage().toStringAsFixed(1)}',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           ),
 
@@ -448,8 +539,6 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
             },
           ),
           SizedBox(height: 20),
-
-          
           // Input Section
           Row(
             children: [
@@ -471,10 +560,10 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
                     double number = double.parse(input);
                     setState(() {
                       if (recentNumbers.length >= 5) {
-                        recentNumbers.removeAt(0);
+                        recentNumbers.removeAt(0); // Remove oldest number
                       }
-                      recentNumbers.add(number);
-                      _controller.clear();
+                      recentNumbers.add(number); // Add new number
+                      _controller.clear(); // Clear the input field
                     });
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -486,29 +575,118 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
               ),
             ],
           ),
-          SizedBox(height: 20),
+          SizedBox(height: 20), // Spacing between input and graph
 
           // Graph Section
           Expanded(
-            flex: 2,
             child: LineChart(
               LineChartData(
-                minY: 0,
-                maxY: maxY,
-                lineBarsData: [
+                minY: 0, // Y-axis lower bound at 0
+                maxY: maxY, // Use the rounded maxY
+                lineBarsData: recentNumbers.isEmpty ? []
+                : 
+                recentNumbers.length == 1 ? [
+                  // Single data point – show dot
+                  LineChartBarData(
+                    spots: [FlSpot(0, recentNumbers[0])],
+                    isCurved: false,
+                    color: bpmToGradientColor(recentNumbers[0]),
+                    barWidth: 2,
+                    dotData: FlDotData(show: true),
+                    belowBarData: BarAreaData(show: false),
+                  ),
+                ]
+                :
+                [
+                  // Gradient background underlay that mimics the line color pattern
+                  ...List.generate(
+                    recentNumbers.length - 1,
+                    (i) {
+                      final p1 = FlSpot(i.toDouble(), recentNumbers[i]);
+                      final p2 = FlSpot((i + 1).toDouble(), recentNumbers[i + 1]);
+
+                      return LineChartBarData(
+                        spots: [p1, p2],
+                        isCurved: false,
+                        barWidth: 0, // invisible line
+                        color: Colors.transparent,
+                        dotData: FlDotData(show: false),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          gradient: LinearGradient(
+                            colors: [
+                              // ignore: deprecated_member_use
+                              bpmToGradientColor(p1.y).withOpacity(0.15),
+                              // ignore: deprecated_member_use
+                              bpmToGradientColor(p2.y).withOpacity(0.15),
+                            ],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+              
+                  // 1. Colored line segments with gradient
+                  ...List.generate(
+                    recentNumbers.length - 1,
+                    (i) {
+                      final p1 = FlSpot(i.toDouble(), recentNumbers[i]);
+                      final p2 = FlSpot((i + 1).toDouble(), recentNumbers[i + 1]);
+
+                      return LineChartBarData(
+                        spots: [p1, p2],
+                        isCurved: false,
+                        barWidth: 2,
+                        dotData: FlDotData(show: false),
+                        belowBarData: BarAreaData(show: false),
+
+                        // Gradient from p1 to p2 based on BPM range
+                        gradient: LinearGradient(
+                          colors: [
+                            bpmToGradientColor(p1.y),
+                            bpmToGradientColor(p2.y),
+                          ],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                      );
+                    },
+                  ),
+
+                  // 2. Dots with color-coded BPM
                   LineChartBarData(
                     spots: List.generate(
                       recentNumbers.length,
                       (index) => FlSpot(index.toDouble(), recentNumbers[index]),
                     ),
                     isCurved: false,
-                    color: Colors.blue,
-                    barWidth: 2,
-                    dotData: FlDotData(show: true),
+                    color: Colors.transparent,
+                    barWidth: 0,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, barData, index) {
+                        return FlDotCirclePainter(
+                          radius: 3.5,
+                          color: bpmToGradientColor(spot.y),
+                          strokeWidth: 0,
+                        );
+                      },
+                    ),
                   ),
                 ],
+
                 titlesData: FlTitlesData(
                   bottomTitles: AxisTitles(
+                    axisNameWidget: Padding(
+                      padding: EdgeInsets.only(top: 4), // Extra breathing room
+                      child: Text(
+                        'Time',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    axisNameSize: 30, // Increased from default to avoid cutoff
                     sideTitles: SideTitles(
                       showTitles: true,
                       interval: 1,
@@ -523,14 +701,14 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
                         return Text('');
                       },
                     ),
-                    axisNameWidget: Text('Input Order'),
                   ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 40,
-                      interval: yInterval,
+                      reservedSize: 40, // Space for y-axis labels
+                      interval: yInterval, // Set the y-axis tick interval
                       getTitlesWidget: (value, meta) {
+                        // Only show labels up to maxY
                         if (value <= maxY) {
                           return Text(
                             value.toInt().toString(),
@@ -540,13 +718,14 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
                         return Text('');
                       },
                     ),
-                    axisNameWidget: Text('Number Value'),
+                    axisNameWidget: Text('BPM', style: TextStyle(fontWeight: FontWeight.bold)),
+                    axisNameSize: 28, // space for the label
                   ),
                   topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
-                borderData: FlBorderData(show: true),
-                gridData: FlGridData(show: true),
+                borderData: FlBorderData(show: true), // Show chart border
+                gridData: FlGridData(show: true), // Show grid lines
               ),
             ),
           ),
