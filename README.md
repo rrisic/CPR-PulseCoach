@@ -11,6 +11,7 @@
 - **OLED Display** (128x64)
 - **Flutter** (Dart) Mobile App
 - **PlatformIO + VSCode** for embedded development
+
 Outside Bill of Materials:
 https://docs.google.com/spreadsheets/d/1s3hhZBtb4kIeTuZiVuZkW2nTHrM9OWxuYVe5d_oYUjo/edit?usp=sharing
 
