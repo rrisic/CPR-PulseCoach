@@ -13,7 +13,6 @@ BLEService customService("19B10000-E8F2-537E-4F6C-D104768A1214");
 BLEIntCharacteristic testCharacteristic("19B10001-E8F2-537E-4F6C-D104768A1214", BLERead | BLENotify);
 BLEIntCharacteristic numberCharacteristic("19B10002-E8F2-537E-4F6C-D104768A1214", BLERead | BLENotify);
 BLEIntCharacteristic resultCharacteristic("19B10003-E8F2-537E-4F6C-D104768A1214", BLERead | BLENotify);
-BLEIntCharacteristic accuracyCharacteristic("19B10004-E8F2-537E-4F6C-D104768A1214", BLERead | BLENotify);
 
 using namespace std;
 
@@ -29,7 +28,7 @@ using namespace std;
 
 // Constants
 constexpr int MODE_BUTTON_PIN = 4;
-constexpr int TEST_DURATION = 30000;
+constexpr int TEST_DURATION = 15000;
 constexpr float CALIB_FACTOR = 117.58f;
 // Global variables
 bool isTrainingMode = true;
@@ -58,12 +57,10 @@ void setup() {
     customService.addCharacteristic(testCharacteristic);
     customService.addCharacteristic(numberCharacteristic);
     customService.addCharacteristic(resultCharacteristic);
-    customService.addCharacteristic(accuracyCharacteristic);
     BLE.addService(customService);
     testCharacteristic.writeValue(0); // Initial value for testing
     numberCharacteristic.writeValue(0); // Initial value for the number
     resultCharacteristic.writeValue(0); // Initial Result
-    accuracyCharacteristic.writeValue(0);
 
     BLE.advertise();
     Serial.println("BLE Peripheral - Arduino R4 WiFi is now advertising...");
@@ -296,8 +293,6 @@ void loop() {
             if (central && central.connected()) {
                 delay(2000);
                 resultCharacteristic.writeValue(test_avg_bpm);
-                delay(50);
-                accuracyCharacteristic.writeValue(accuracy * 100);
                 Serial.println("Sent test results to Flutter app.");
             }
 

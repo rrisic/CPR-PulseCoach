@@ -202,7 +202,7 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
                 if (countdown == 0 && title == "Starting test in") {
                   // Switch to Timer stage
                   title = "Timer";
-                  countdown = 30;
+                  countdown = 15;
                 } else if (countdown == 0 && title == "Timer") {
                   t.cancel();
                   Navigator.of(context).pop();
