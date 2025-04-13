@@ -292,7 +292,9 @@ void loop() {
             // Send results once
             if (central && central.connected()) {
                 delay(2000);
-                resultCharacteristic.writeValue(test_avg_bpm * 1000 + accuracy * 100); // sends "encrypted" value containing bpm (top 3 digits) and accuracy (bottom 3 digits, 0-100)
+                resultCharacteristic.writeValue(test_avg_bpm);
+                // do later
+                // sends "encrypted" value containing bpm (top 3 digits) and accuracy (bottom 3 digits, 0-100)
                 Serial.println("Sent test results to Flutter app.");
             }
 
