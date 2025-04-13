@@ -22,3 +22,8 @@ flutter:
     - assets/metronome.mp3
     - assets/panic.mp3
     - assets/heart.png
+
+fonts:
+  - family: MaterialIcons
+    fonts:
+      - asset: fonts/MaterialIcons-Regular.ttf

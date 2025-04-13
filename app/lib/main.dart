@@ -24,6 +24,8 @@ void main() async {
   runApp(MyApp());
 }
 
+
+
 Future<Map<String, bool>> requestPermissions() async {
   Map<String, bool> permissionResults = {
     'bluetooth': false,
@@ -112,6 +114,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: Scaffold(
         appBar: AppBar(
           title: Text('CPR PulseCoach'),
@@ -134,21 +137,22 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
   List<ScanResult> scanResults = [];
   bool isScanning = false;
   BluetoothDevice? connectedDevice;
-  BluetoothCharacteristic? targetCharacteristic;
+  BluetoothCharacteristic? testCharacteristic;
   BluetoothCharacteristic? numberCharacteristic;
+  BluetoothCharacteristic? testResultCharacteristic;
   bool ledState = false;
   int receivedNumber = 0;
 
   // Audio file selection
   final List<Map<String, String>> audioFiles = [
-    {'name': "Stayin' Alive", 'path': 'stayinalive.mp3'},
-    {'name': 'Life is a Highway', 'path': 'highway.mp3'},
-    {'name': 'Levitating', 'path': 'levitating.mp3'},
-    {'name': 'All Star', 'path': 'allstar.mp3'},
+    {'name': "Stayin' Alive - Bee Gees", 'path': 'stayinalive.mp3'},
+    {'name': 'Life is a Highway - Rascal Flatts', 'path': 'highway.mp3'},
+    {'name': 'Levitating - Dua Lipa', 'path': 'levitating.mp3'},
+    {'name': 'All Star - Smash Mouth', 'path': 'allstar.mp3'},
     {'name': 'Metronome', 'path': 'metronome.mp3'},
-    {'name': 'Crowd Panic', 'path': 'panic.mp3'}
+    {'name': 'Stressful Environment', 'path': 'panic.mp3'}
   ];
-  String? selectedAudioPath = 'metronome.mp3';
+  String selectedAudioPath = 'metronome.mp3';
 
   // Animation for pulsating effect
   late AnimationController _animationController;
@@ -158,6 +162,7 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
   final String serviceUuid = "19B10000-E8F2-537E-4F6C-D104768A1214";
   final String characteristicUuid = "19B10001-E8F2-537E-4F6C-D104768A1214";
   final String numberCharacteristicUuid = "19B10002-E8F2-537E-4F6C-D104768A1214";
+  final String resultCharacteristicUuid = "19B10003-E8F2-537E-4F6C-D104768A1214";
 
   @override
   void initState() {
@@ -179,6 +184,79 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
       ),
     );
   }
+
+  void showTimerPopup(BuildContext context) {
+    int timeLeft = 30;
+    Timer? timer;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setPopupState) {
+            timer ??= Timer.periodic(Duration(seconds: 1), (Timer t) {
+              if (timeLeft > 0) {
+                timeLeft--;
+                setPopupState(() {}); // Trigger rebuild of popup UI
+              } else {
+                t.cancel();
+                Navigator.of(context).pop(); // Close timer popup
+                //showScorePopup(context); // Show score popup
+              }
+            });
+
+            return AlertDialog(
+              title: Text("Timer"),
+              content: Text(
+                "Time remaining: $timeLeft seconds",
+                style: TextStyle(fontSize: 20),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    timer?.cancel();
+                    Navigator.of(context).pop();
+                  },
+                  child: Text("Cancel"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void showScorePopup(BuildContext context, int score) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Your Score"),
+        content: Text(
+          "$score",
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text("Close"),
+          )
+        ],
+      ),
+    );
+  }
+  void monitorConnectionState(BluetoothDevice device) {
+    device.connectionState.listen((BluetoothConnectionState state) {
+      setState((){
+        connectedDevice = null;
+      });
+      if (state == BluetoothConnectionState.disconnected) {
+        _startBluetoothScan();
+      }
+    });
+  }
+
 
   Future<void> _playBackgroundMusic() async {
     try {
@@ -221,15 +299,16 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
     var subscription = FlutterBluePlus.scanResults.listen(
       (results) {
         for (ScanResult result in results) {
-          print('Device found: ${result.device.platformName} (${result.device.remoteId})');
-          if (result.device.platformName == targetDeviceName) {
-            setState(() {
+            print('Device found: ${result.device.platformName} (${result.device.remoteId})');
+            if (result.device.platformName == targetDeviceName) {
               if (!scanResults.any((existing) => existing.device.remoteId == result.device.remoteId)) {
-                scanResults.add(result);
+                setState(() {
+                  scanResults.add(result);
+                });
+                break; // Move the break outside setState
               }
-            });
+            }
           }
-        }
       },
       onError: (e) {
         print('Scan results error: $e');
@@ -308,9 +387,17 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
             print('Characteristic UUID: ${characteristic.uuid.toString()}');
             if (characteristic.uuid.toString().toLowerCase() == characteristicUuid.toLowerCase()) {
               setState(() {
-                targetCharacteristic = characteristic;
+                testCharacteristic = characteristic;
               });
               print('Found target characteristic: $characteristicUuid');
+              if (characteristic.properties.notify){
+                await characteristic.setNotifyValue(true);
+                characteristic.lastValueStream.listen((value) {
+                  if (value.isNotEmpty && value[0] != 0) {
+                    showTimerPopup(context);
+                  }
+                });
+              }
             } if (characteristic.uuid.toString().toLowerCase() == numberCharacteristicUuid.toLowerCase()) {
               setState(() {
                 numberCharacteristic = characteristic;
@@ -335,12 +422,25 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
                   }
                 });
               }
+            } if (characteristic.uuid.toString().toLowerCase() == resultCharacteristicUuid.toLowerCase()){
+              setState(() {
+                testResultCharacteristic = characteristic;
+              });
+              print('Found target characteristic: $characteristicUuid');
+              if (characteristic.properties.notify){
+                await characteristic.setNotifyValue(true);
+                characteristic.lastValueStream.listen((value) {
+                  if (value.isNotEmpty) {
+                    showScorePopup(context, value[0]);
+                  }
+                });
+              }
             }
           }
         }
       }
 
-      if (targetCharacteristic == null) {
+      if (testCharacteristic == null) {
         print('Target characteristic not found');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Target characteristic not found')),
@@ -352,7 +452,7 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
         if (state == BluetoothDeviceState.disconnected) {
           setState(() {
             connectedDevice = null;
-            targetCharacteristic = null;
+            testCharacteristic = null;
             ledState = false;
           });
           print('Device disconnected: ${device.platformName}');
@@ -369,27 +469,7 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
     }
   }
 
-  Future<void> _toggleLed() async {
-    if (targetCharacteristic == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Not connected to a device with the target characteristic')),
-      );
-      return;
-    }
-
-    try {
-      setState(() {
-        ledState = !ledState;
-      });
-      await targetCharacteristic!.write([ledState ? 1 : 0]);
-      print('LED state set to: $ledState');
-    } catch (e) {
-      print('Error writing to characteristic: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error controlling LED: $e')),
-      );
-    }
-  }
+  
 
   double roundUpMaxY(double maxValue) {
     if (maxValue <= 0) return 10.0; // Default for no data or negative values
@@ -483,31 +563,13 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center, // Center the row contents
               children: [
-                // Pulsating Image
-                AnimatedBuilder(
-                  animation: _pulseAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _pulseAnimation.value,
-                      child: child,
-                    );
-                  },
-                  child: Image.asset(
-                    'assets/heart.png',
-                    width: 40, // Reduced size to fit better
-                    height: 40,
-                    colorBlendMode: BlendMode.dst,
-                  ),
-                ),
-                SizedBox(width: 10), // Space between image and text
-                // Pulsating Average Value
                 AnimatedBuilder(
                   animation: _pulseAnimation,
                   builder: (context, child) {
                     return Transform.scale(
                       scale: _pulseAnimation.value,
                       child: Text(
-                        'Average: ${_calculateAverage().toStringAsFixed(1)}',
+                        '\u2665 BPM: ${_calculateAverage().toStringAsFixed(1)}',
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
@@ -522,60 +584,41 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
           ),
 
           // Audio File Dropdown
-          DropdownButton<String>(
-            value: selectedAudioPath,
-            hint: Text('Select an audio file'),
-            isExpanded: true,
-            items: audioFiles.map((audio) {
-              return DropdownMenuItem<String>(
-                value: audio['path'],
-                child: Text(audio['name']!),
-              );
-            }).toList(),
-            onChanged: (newValue) {
-              if (newValue != null) {
-                _changeAudio(newValue);
-              }
-            },
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+              color: Colors.white,
+            ),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                icon: Padding(
+                  padding: EdgeInsets.only(left: 8),
+                  child: Text('\u25BC', style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade700,
+                  )),
+                ),
+                value: selectedAudioPath,
+                isExpanded: true,
+                items: audioFiles.map((audio) {
+                  return DropdownMenuItem<String>(
+                    value: audio['path'],
+                    child: Text(audio['name']!),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  if (newValue != null) {
+                    _changeAudio(newValue);
+                  }
+                },
+              ),
+            ),
           ),
           SizedBox(height: 20),
           // Input Section
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'Enter a number',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              SizedBox(width: 10),
-              ElevatedButton(
-                onPressed: () {
-                  String input = _controller.text;
-                  try {
-                    double number = double.parse(input);
-                    setState(() {
-                      if (recentNumbers.length >= 5) {
-                        recentNumbers.removeAt(0); // Remove oldest number
-                      }
-                      recentNumbers.add(number); // Add new number
-                      _controller.clear(); // Clear the input field
-                    });
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Please enter a valid number')),
-                    );
-                  }
-                },
-                child: Text('Add'),
-              ),
-            ],
-          ),
-          SizedBox(height: 20), // Spacing between input and graph
+          
 
           // Graph Section
           Expanded(
@@ -729,7 +772,7 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
               ),
             ),
           ),
-          SizedBox(height: 20),
+          SizedBox(height: 80),
 
           // Bluetooth Scan Button
           ElevatedButton(
@@ -759,12 +802,6 @@ class _InputGraphWidgetState extends State<InputGraphWidget> with SingleTickerPr
             ),
           ),
 
-          // LED Control Button
-          ElevatedButton(
-            onPressed: connectedDevice != null ? _toggleLed : null,
-            child: Text(ledState ? 'Turn LED OFF' : 'Turn LED ON'),
-          ),
-          SizedBox(height: 10),
         ],
       ),
     );
