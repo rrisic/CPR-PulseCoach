@@ -10,8 +10,9 @@
 
 // bluetooth service
 BLEService customService("19B10000-E8F2-537E-4F6C-D104768A1214");
-BLEByteCharacteristic ledCharacteristic("19B10001-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite);
+BLEIntCharacteristic testCharacteristic("19B10001-E8F2-537E-4F6C-D104768A1214", BLERead | BLENotify);
 BLEIntCharacteristic numberCharacteristic("19B10002-E8F2-537E-4F6C-D104768A1214", BLERead | BLENotify);
+BLEIntCharacteristic resultCharacteristic("19B10003-E8F2-537E-4F6C-D104768A1214", BLERead | BLENotify);
 
 using namespace std;
 
@@ -36,6 +37,7 @@ vector<unsigned long> compression_times;
 unsigned long last_compression = 0;
 unsigned long last_mode_button_press = 0;
 unsigned long test_start_time = 0;
+unsigned long test_button_presses = 0;
 constexpr unsigned long MODE_DEBOUNCE = 200;
 int len = 0;
 float calibrationFactor;
@@ -46,15 +48,20 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 using namespace std;
 
 void setup() {
+    //OLED setup
+    oledSetup(display, SSD1306_SWITCHCAPVCC, I2C_ADDRESS);
+
     //bluetooth setup
     BLE.begin();
     BLE.setLocalName("Arduino R4 WiFi");
     BLE.setAdvertisedService(customService);
-    customService.addCharacteristic(ledCharacteristic);
+    customService.addCharacteristic(testCharacteristic);
     customService.addCharacteristic(numberCharacteristic);
+    customService.addCharacteristic(resultCharacteristic);
     BLE.addService(customService);
-    ledCharacteristic.writeValue(0); // Initial value for LED
+    testCharacteristic.writeValue(0); // Initial value for testing
     numberCharacteristic.writeValue(0); // Initial value for the number
+    resultCharacteristic.writeValue(0); // Initial Result
 
     BLE.advertise();
     Serial.println("BLE Peripheral - Arduino R4 WiFi is now advertising...");
@@ -80,6 +87,7 @@ void checkModeButton() {
         } else {
             Serial.println("Switched to Testing Mode");
             test_start_time = millis();
+            test_button_presses = 0;
         }
     }
 }
@@ -106,9 +114,19 @@ float handleTrainingMode() {
                 Serial.println("Compression rate too inconsistent!");
             }
             if (avg_bpm > MAX_BPM) {
-                Serial.println("Too fast!");
+                Serial.println("Too Fast!");
+                clearOled(display);
+                delay(50);
+                setText(display, "Too Fast!");
+                delay(50);
+                display.display();
             } else if (avg_bpm < MIN_BPM) {
-                Serial.println("Too slow!");
+                Serial.println("Too Slow!");
+                clearOled(display);
+                delay(50);
+                setText(display, "Too Slow!");
+                delay(50);
+                display.display();
             }
         }
     }
@@ -135,17 +153,23 @@ float handleTestingMode() {
             compression_times.clear();
             test_start_time = millis();
         }
+        isTrainingMode = true;
+        return test_button_presses / (TEST_DURATION / 60000);
     } else {
         int remaining_seconds = (TEST_DURATION - elapsed_time) / 1000;
         Serial.print("Time remaining: ");
         Serial.print(remaining_seconds);
         Serial.println(" seconds");
+        return 0;
     }
-    return avg_bpm;
 }
 
 void loop() {
+    bool oldTraining = isTrainingMode;
     checkModeButton();
+    if (oldTraining != isTrainingMode){
+      testCharacteristic.writeValue(1); // start test
+    }
     char pressed = 0;
     BLEDevice central = BLE.central();
     if (central) {
@@ -171,15 +195,18 @@ void loop() {
         compression_times.erase(compression_times.begin());
     }
     
-    float avg_bpm = 0;
     if (isTrainingMode) {
-        avg_bpm = handleTrainingMode();
+        float avg_bpm = handleTrainingMode();
+        if (central.connected() && pressed) {
+            numberCharacteristic.writeValue(avg_bpm);
+        }
     } else {
-        avg_bpm = handleTestingMode();
+        float test_avg_bpm = handleTestingMode();
+        if (central.connected() && pressed && test_avg_bpm != 0) {
+          resultCharacteristic.writeValue(test_avg_bpm);
+      }
     }
-    if (central.connected() && pressed) {
-        numberCharacteristic.writeValue(avg_bpm);
-    }
+    
 }
 
 
