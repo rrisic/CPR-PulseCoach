@@ -224,6 +224,7 @@ void loop() {
         if (switchToTraining && !waitingToSwitch) {
             // Send results once
             if (central && central.connected()) {
+                delay(500);
                 resultCharacteristic.writeValue(test_avg_bpm); // You can add new BLECharacteristics for accuracy & consistency if needed
                 Serial.println("Sent test results to Flutter app.");
             }
