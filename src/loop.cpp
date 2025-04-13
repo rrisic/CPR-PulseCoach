@@ -1,6 +1,6 @@
 #include "loop.h"
 
-float measureLoadCell(HX711 loadCell, const int dataPin, const int clkPin)
+float measureLoadCell(HX711 &loadCell, const int dataPin, const int clkPin)
 {
     constexpr int NUM_SAMPLES = 3;
     constexpr int G_PER_KG = 1000;
@@ -27,12 +27,13 @@ float measureLoadCell(HX711 loadCell, const int dataPin, const int clkPin)
     return load;
 }
 
-void clearOled(Adafruit_SSD1306 display)
+void clearOled(Adafruit_SSD1306 &display)
 {
     display.clearDisplay();
+    display.setCursor(0, 0);
 }
 
-void setText(Adafruit_SSD1306 display, const char *message, int textSize, int color, int x, int y)
+void setText(Adafruit_SSD1306 &display, const char *message, int textSize, int color, int x, int y)
 {
     display.setTextSize(textSize);
     display.setTextColor(color);

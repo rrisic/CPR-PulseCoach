@@ -7,8 +7,8 @@
 
 void buttonSetup(const int pinNum);
 
-float loadCellCalibrate(HX711 loadCell, const int dataPin, const int clkPin, const int btnPin, const float knownWeight);
+float loadCellCalibrate(HX711 &loadCell, const int dataPin, const int clkPin, const int btnPin, const float knownWeight);
 
-bool oledSetup(Adafruit_SSD1306 display, const int SSD1306, const int i2cAddress);
+bool oledSetup(Adafruit_SSD1306 &display, const int SSD1306, const int i2cAddress);
 
 #endif
