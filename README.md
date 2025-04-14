@@ -6,7 +6,9 @@
 💡 *Built at UC Irvine's BitHacks 2025*
 #### Awards
 🥈**Second Place Overall**
-🥇**Hacker's Choice** (#1 favorite project as voted by competitors
+
+🥇**Hacker's Choice** 
+(#1 favorite project as voted by competitors)
 
 ## 🛠️ **Built With**
 - **Arduino UNO R4 WiFi**
