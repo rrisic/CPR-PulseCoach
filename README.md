@@ -1,4 +1,4 @@
-# 🫀 **CPR PulseCoach**
+# ❤️ **CPR PulseCoach**
 #### *Turning rhythm into rescue*
 
 **CPR PulseCoach** is an embedded training device that helps civilians and first responders alike improve their CPR timing and rhythm. Built for real-world readiness, it offers engaging modes, live performance feedback, and seamless mobile integration — all designed to help users master the life-saving skill of chest compressions.
